@@ -82,7 +82,6 @@ export class TeaShop extends Component {
                 detail: this.text(bubble, '', 35, 0, 240, 42, 19, C.ink),
                 mood: this.text(bubble, '', 18, -35, 280, 28, 19, C.green),
                 bar: this.nodeAt(bubble, 'Patience', 0, -51, 280, 6).addComponent(Graphics) };
-            node.on(Node.EventType.TOUCH_END, () => { if (!this.canAct() || this.drag) return; this.game.acceptOrder(i); this.render(); }, this);
             this.customers.push(ui);
         }
         // Exact wood pixels extracted from the existing shop background, no procedural table.
@@ -205,7 +204,7 @@ export class TeaShop extends Component {
                 ui.opacity.opacity = Math.round(255 * (1 - entry) * (1 - departure));
                 ui.portrait.setScale(1, 1, 1);
                 const customer = this.game.customers[index];
-                const urgent = customer && customer.state !== 'thinking' && customer.patience < 10;
+                const urgent = customer && customer.patience < 10;
                 const walking = ui.arrival > 0 || ui.goodbye > 0;
                 ui.portrait.setPosition((urgent ? Math.sin(this.clock * 9) * 2 : 0), -58 + Math.sin(this.clock * (walking ? 17 : 2.6) + index) * (walking ? 4 : 2));
                 if (!customer && ui.goodbye === 0) ui.node.active = false;
@@ -358,14 +357,14 @@ export class TeaShop extends Component {
                 this.drawCup(ghost, cup, 0, 0);
                 this.effect(ghost.node, 0.25, t => { ghost.node.setPosition(p.x + (-420 - p.x) * t, p.y + (-270 - p.y) * t); ghost.node.setScale(1 - t, 1 - t, 1); });
             } else if (target && target.kind === 'machine') {
-                if (this.game.cups[0].state === 'ready') this.game.message = '这杯已经封好啦，拖给已接单的客人。';
+                if (this.game.cups[0].state === 'ready') this.game.message = '这杯已经封好啦，拖给对应的客人。';
                 else {
                     this.game.seal();
                     if (this.game.cups[0].state === 'sealing') this.inMachine = true;
                 }
             } else if (target && target.kind === 'customer') {
                 this.deliver(target.slot, p);
-            } else if (!tap) this.game.message = '拖到封盖机、已接单客人或桌下垃圾桶。';
+            } else if (!tap) this.game.message = '拖到封盖机、客人或桌下垃圾桶。';
         }
         this.returnCup(this.game.cups[0].state === 'stored' ? 0 : tap ? 0.08 : 0.16);
         this.render();
@@ -555,14 +554,15 @@ export class TeaShop extends Component {
             }
             ui.portrait.active = true; ui.bubble.active = true;
             if (this.portraits.length) ui.sprite.spriteFrame = this.portraits[(customer.id - 1) % 4];
-            const recipe = RECIPES[customer.recipe], thinking = customer.state === 'thinking';
-            const urgent = !thinking && customer.patience < 10;
-            ui.orderArt.node.active = !thinking; ui.bar.node.active = !thinking;
-            if (!thinking) this.drawCup(ui.orderArt, { ingredients: recipe.ingredients, state: 'ready', remaining: 0 }, 76, 0);
-            ui.title.string = thinking ? `${NAMES[(customer.id - 1) % 4]}：让我想想…` : `${recipe.name} · ¥${recipe.price}`;
-            ui.detail.string = thinking ? ['·', '· ·', '· · ·'][Math.floor(this.clock * 3) % 3] : recipe.ingredients.map(i => INGREDIENT_NAMES[i]).join(' + ');
-            ui.mood.string = thinking ? '正在考虑喝什么' : customer.state === 'ordering' ? `点击接单 · ${Math.ceil(customer.patience)}s` : `✓ 已接单 · 拖杯交付 ${Math.ceil(customer.patience)}s`;
-            ui.mood.color = new Color(urgent ? C.red : customer.state === 'ordering' ? C.gold : C.green);
+            // The order is readable the instant the customer walks in.
+            const recipe = RECIPES[customer.recipe];
+            const urgent = customer.patience < 10;
+            ui.orderArt.node.active = true; ui.bar.node.active = true;
+            this.drawCup(ui.orderArt, { ingredients: recipe.ingredients, state: 'ready', remaining: 0 }, 76, 0);
+            ui.title.string = `${recipe.name} · ¥${recipe.price}`;
+            ui.detail.string = recipe.ingredients.map(i => INGREDIENT_NAMES[i]).join(' + ');
+            ui.mood.string = `${NAMES[(customer.id - 1) % 4]} · 拖杯交付 ${Math.ceil(customer.patience)}s`;
+            ui.mood.color = new Color(urgent ? C.red : C.green);
             ui.sprite.color = new Color(urgent ? '#FFE2CE' : '#FFFFFF');
             this.progress(ui.bar, customer.patience / customer.maxPatience, urgent ? C.red : C.green, 280);
         });

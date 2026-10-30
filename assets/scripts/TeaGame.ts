@@ -15,7 +15,7 @@ export const RECIPES: Recipe[] = [
     { name: '椰果奶茶', ingredients: ['tea', 'milk', 'jelly'], price: 24, color: '#DEB68A' },
     { name: '双拼奶茶', ingredients: ['tea', 'milk', 'pearl', 'jelly'], price: 30, color: '#C89C70' },
 ];
-export interface Customer { id: number; recipe: number; patience: number; maxPatience: number; state: 'thinking' | 'ordering' | 'accepted'; thinkRemaining: number }
+export interface Customer { id: number; recipe: number; patience: number; maxPatience: number }
 export interface Cup { ingredients: Ingredient[]; state: 'stored' | 'placing' | 'empty' | 'making' | 'sealing' | 'ready'; remaining: number; size?: CupSize }
 export class TeaGame {
     readonly duration = 90;
@@ -34,16 +34,18 @@ export class TeaGame {
     ended = false;
     customers: (Customer | null)[] = [null, null, null];
     cups: Cup[] = [this.emptyCup()];
-    message = '客人正在想喝什么。先点击桌下杯子，把空杯放上桌。';
+    message = '客人已经点单，直接取杯制作。先点击桌下杯子，把空杯放上桌。';
     private nextId = 1;
     private spawnIn = 4;
     constructor(private random: () => number = Math.random) { this.spawn(0); }
     private emptyCup(): Cup { return { ingredients: [], state: 'stored', remaining: 0 }; }
+    // Customers order the moment they walk in: the bubble shows the recipe and the
+    // patience bar starts ticking right away, so there is no accept step.
     private spawn(slot: number) {
         const unlocked = this.served < 2 ? 2 : this.served < 5 ? 3 : 4;
         const recipe = this.nextId === 1 ? 0 : Math.floor(this.random() * unlocked);
-        const maxPatience = Math.max(22, 38 - this.served * 0.8);
-        this.customers[slot] = { id: this.nextId++, recipe, patience: maxPatience, maxPatience, state: 'thinking', thinkRemaining: 2.5 };
+        const maxPatience = Math.max(26, 40 - this.served * 0.8);
+        this.customers[slot] = { id: this.nextId++, recipe, patience: maxPatience, maxPatience };
     }
     get active(): boolean { return !this.paused && !this.ended; }
     select(index: number) { if (this.active && Number.isInteger(index) && index >= 0 && index < this.cups.length) this.selected = index; }
@@ -72,17 +74,6 @@ export class TeaGame {
         this.message = '杯子放好了，点击桌面材料加料，或直接按住拖到封盖机。';
         return true;
     }
-    acceptOrder(slot: number): boolean {
-        if (!this.active) return false;
-        const customer = this.customers[slot];
-        if (!customer) return false;
-        if (customer.state === 'thinking') { this.message = '客人还在想喝什么，稍等一下。'; return false; }
-        if (customer.state === 'accepted') { this.message = '已经接单，封盖后把杯子拖给这位客人。'; return false; }
-        customer.state = 'accepted';
-        customer.patience = customer.maxPatience;
-        this.message = `已接单：${RECIPES[customer.recipe].name}。取杯后按气泡配方制作。`;
-        return true;
-    }
     add(ingredient: Ingredient) {
         if (!this.active) return;
         const cup = this.cups[this.selected];
@@ -100,7 +91,7 @@ export class TeaGame {
         if (cup.state !== 'making') { this.message = '请选择一杯制作中的奶茶。'; return; }
         if (cup.ingredients.indexOf('milk') < 0) { this.message = '奶茶还缺鲜奶哦。'; return; }
         cup.state = 'sealing'; cup.remaining = this.sealDuration;
-        this.message = '机器正在封盖，1 秒后可拖给已接单的客人。';
+        this.message = '机器正在封盖，1 秒后拖给对应客人即可。';
     }
     discard() {
         if (!this.active) return;
@@ -114,7 +105,6 @@ export class TeaGame {
         const customer = this.customers[slot];
         const cup = this.cups[this.selected];
         if (!customer) { this.message = '这个位置还没有顾客。'; return false; }
-        if (customer.state !== 'accepted') { this.message = '先等客人想好，再点击客人接单。'; return false; }
         if (cup.state !== 'ready') { this.message = '先拖到机器封盖，再拖给顾客。'; return false; }
         const recipe = RECIPES[customer.recipe];
         if (cup.ingredients.length !== recipe.ingredients.length || !recipe.ingredients.every(i => cup.ingredients.indexOf(i) >= 0)) {
@@ -148,13 +138,7 @@ export class TeaGame {
         }
         this.customers.forEach((customer, slot) => {
             if (!customer) return;
-            let waitingTime = dt;
-            if (customer.state === 'thinking') {
-                waitingTime = Math.max(0, dt - customer.thinkRemaining);
-                customer.thinkRemaining = Math.max(0, customer.thinkRemaining - dt);
-                if (customer.thinkRemaining === 0) customer.state = 'ordering';
-            }
-            customer.patience -= waitingTime;
+            customer.patience -= dt;
             if (customer.patience <= 0) {
                 this.customers[slot] = null; this.lost++; this.combo = 0;
                 this.departureRemaining[slot] = this.departureDuration;

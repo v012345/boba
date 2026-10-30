@@ -11,7 +11,6 @@ try {
     let count = 0;
     function test(name, run) { run(); count++; console.log(`✓ ${name}`); }
     function take(game, index = game.selected) { assert.equal(game.takeCup(index), true); game.tick(0.45); }
-    function accept(game, slot = 0) { game.tick(2.5); assert.equal(game.acceptOrder(slot), true); }
     function make(game, recipe = 0) { take(game); RECIPES[recipe].ingredients.forEach(i => game.add(i)); game.seal(); game.tick(1); }
     test('First customer and tea-first constraint', () => {
         const g = new TeaGame(); assert.equal(g.customers[0].recipe, 0); take(g);
@@ -34,19 +33,19 @@ try {
         g.discard(); assert.equal(g.takeFromSupply(), 0);
     });
     test('Correct deliveries grant money and combo bonus', () => {
-        const g = new TeaGame(() => 0); accept(g); make(g); assert.equal(g.deliver(0), true);
+        const g = new TeaGame(() => 0); make(g); assert.equal(g.deliver(0), true);
         assert.equal(g.money, 18); assert.equal(g.cups[0].state, 'stored');
-        g.tick(4); const slot = g.customers.findIndex(Boolean); accept(g, slot); make(g); g.deliver(slot); assert.equal(g.money, 38); assert.equal(g.bestCombo, 2);
+        g.tick(4); const slot = g.customers.findIndex(Boolean); make(g); g.deliver(slot); assert.equal(g.money, 38); assert.equal(g.bestCombo, 2);
     });
     test('Wrong order retains cup, costs patience, resets combo', () => {
-        const g = new TeaGame(); accept(g); make(g, 1); const before = g.customers[0].patience;
+        const g = new TeaGame(); make(g, 1); const before = g.customers[0].patience;
         g.combo = 3; assert.equal(g.deliver(0), false);
         assert.equal(g.customers[0].patience, before - 5); assert.equal(g.combo, 0);
         assert.equal(g.cups[0].state, 'ready'); assert.equal(g.money, 0);
     });
-    test('Every recipe is accepted with exact ingredients', () => {
+    test('Every recipe is delivered with exact ingredients', () => {
         RECIPES.forEach((r, index) => {
-            const g = new TeaGame(); g.customers[0].recipe = index; accept(g); make(g, index);
+            const g = new TeaGame(); g.customers[0].recipe = index; make(g, index);
             assert.equal(g.deliver(0), true); assert.equal(g.money, r.price);
         });
     });
@@ -73,32 +72,31 @@ try {
         g.tick(0.25); assert.equal(g.cups[0].state, 'empty');
         g.add('tea'); assert.equal(g.cups[0].state, 'making');
     });
-    test('Customer thinks before revealing an order; acceptance is explicit', () => {
+    test('Order is readable on arrival and patience starts ticking at once', () => {
         const g = new TeaGame(), customer = g.customers[0];
-        assert.equal(customer.state, 'thinking'); assert.equal(g.acceptOrder(0), false);
-        g.tick(2); assert.equal(customer.patience, customer.maxPatience);
-        g.tick(1); assert.equal(customer.state, 'ordering');
-        assert.equal(customer.patience, customer.maxPatience - 0.5);
-        assert.equal(g.acceptOrder(0), true); assert.equal(customer.state, 'accepted');
+        assert.equal(customer.recipe, 0);
         assert.equal(customer.patience, customer.maxPatience);
-        g.tick(3);
-        assert.equal(g.acceptOrder(0), false);
-        assert.equal(customer.patience, customer.maxPatience - 3);
+        g.tick(1);
+        assert.equal(customer.patience, customer.maxPatience - 1);
+        take(g); g.add('tea'); g.add('milk'); g.seal(); g.tick(1);
+        assert.equal(g.deliver(0), true);
+        assert.equal(g.money, 18);
     });
-    test('Ready drinks cannot bypass order acceptance; accepting does not deliver', () => {
-        const g = new TeaGame(); make(g); g.tick(2.5);
-        assert.equal(g.customers[0].state, 'ordering');
-        assert.equal(g.deliver(0), false); assert.equal(g.cups[0].state, 'ready');
-        assert.equal(g.acceptOrder(0), true); assert.equal(g.money, 0);
-        assert.equal(g.deliver(0), true); assert.equal(g.cups[0].state, 'stored');
+    test('Only a sealed cup can be handed over; no accept step is needed', () => {
+        const g = new TeaGame(); take(g); g.add('tea'); g.add('milk');
+        assert.equal(g.deliver(0), false); assert.equal(g.cups[0].state, 'making');
+        g.seal(); g.tick(0.5); assert.equal(g.deliver(0), false);
+        g.tick(0.5); assert.equal(g.deliver(0), true); assert.equal(g.cups[0].state, 'stored');
         g.add('tea'); assert.equal(g.cups[0].ingredients.length, 0);
     });
-    test('Pause freezes cup movement and thinking, and blocks taking and accepting', () => {
+    test('Pause freezes cup movement, patience and input', () => {
         const g = new TeaGame(); g.takeCup(0); g.paused = true;
         g.tick(4); assert.equal(g.cups[0].remaining, 0.45);
-        assert.equal(g.customers[0].thinkRemaining, 2.5); assert.equal(g.takeCup(1), false);
-        g.paused = false; g.tick(3); g.paused = true;
-        assert.equal(g.acceptOrder(0), false); assert.equal(g.customers[0].state, 'ordering');
+        assert.equal(g.customers[0].patience, g.customers[0].maxPatience); assert.equal(g.takeCup(1), false);
+        g.paused = false; g.tick(3);
+        assert.equal(g.customers[0].patience, g.customers[0].maxPatience - 3);
+        g.paused = true; g.tick(3);
+        assert.equal(g.customers[0].patience, g.customers[0].maxPatience - 3);
     });
     test('Shared stack cannot overwrite the single moving cup', () => {
         const g = new TeaGame();
@@ -115,7 +113,7 @@ try {
         g.paused = false; g.tick(100); assert.equal(g.takeFromSupply(), -1);
     });
     test('Empty and unfinished cups cannot seal or deliver; bin removes the entire cup', () => {
-        const g = new TeaGame(); accept(g); take(g); g.seal();
+        const g = new TeaGame(); take(g); g.seal();
         assert.equal(g.cups[0].state, 'empty'); g.add('tea'); g.seal();
         assert.equal(g.cups[0].state, 'making'); assert.equal(g.deliver(0), false);
         g.combo = 4; g.discard(); assert.equal(g.combo, 0);
@@ -149,16 +147,16 @@ try {
     test('Departing customers reserve their slot until exit animation finishes', () => {
         const g = new TeaGame(() => 0);
         g.tick(4); g.tick(6); // All three slots occupied.
-        g.customers.forEach(c => { c.state = 'accepted'; c.patience = 30; });
+        g.customers.forEach(c => { c.patience = 30; });
         g.customers[0].patience = 0.01;
         g.tick(6); // Spawn timer also expires, but the leaving slot is reserved.
         assert.equal(g.customers[0], null);
         g.paused = true; g.tick(10); assert.equal(g.customers[0], null);
         g.paused = false; g.tick(0.5); assert.equal(g.customers[0], null);
-        g.tick(0.5); assert.ok(g.customers[0]); assert.equal(g.customers[0].state, 'thinking');
+        g.tick(0.5); assert.ok(g.customers[0]); assert.equal(g.customers[0].patience, g.customers[0].maxPatience);
     });
     test('Successful delivery also reserves the departing customer slot', () => {
-        const g = new TeaGame(() => 0); accept(g); make(g);
+        const g = new TeaGame(() => 0); make(g);
         assert.equal(g.deliver(0), true); g.tick(0.5);
         assert.equal(g.customers[0], null);
     });
