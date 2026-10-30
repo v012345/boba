@@ -1,0 +1,18 @@
+{
+  "mode": "Built-in image_gen tool",
+  "style": "暖色手绘，手机横屏",
+  "assets": [
+    {
+      "path": "assets/resources/art/shop.png",
+      "prompt": "Use case: stylized-concept. Asset type: actual background art for a landscape mobile bubble tea cooking game, no UI baked in. Warm hand-painted storybook gouache, caramel wood, cream plaster, muted sage green, terracotta accents, pencil outlines, soft paper grain. Front-facing cozy tiny Taiwanese tea shop viewed from staff side looking toward service window. Wide 16:9 landscape composition. Upper quarter: sage striped awning, amber pendant lights at edges, shelves with tea jars and little plant at far edges. Middle upper zone an open softly lit pale cream service window, deliberately quiet for three customer portraits and order UI to be overlaid. Lower half: broad honey-colored wooden worktop with gentle plank grain, spacious clear center for two preparation stations and bottom ingredient buttons. A little botanical decoration at outer corners only. No people, no cups or appliances in the central work area, no words, no letters, no logos, no watermark, no UI, no harsh shadows. Flat frontal game illustration, polished charming handmade art. Output 1536x864 if possible."
+    },
+    {
+      "path": "assets/resources/art/customers.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent character sprite atlas for a cozy hand-painted bubble tea mobile game. One image with EXACTLY 4 equal square cells in a 2 by 2 grid, transparent background, no dividers. Each cell contains one complete centered waist-up friendly chibi customer with large expressive face, hands in front of torso, front-facing, same scale, plenty of transparent padding so nothing crosses a cell edge. Top left: young woman with chestnut bob, cream beret and terracotta cardigan. Top right: friendly young man with round glasses, tousled black hair and sage sweater. Bottom left: cheerful older lady with silver bun, ochre scarf and cream blouse. Bottom right: cheerful young delivery rider with muted teal helmet and mustard jacket. Neutral soft closed-mouth smiles, open eyes, rosy cheeks. Cozy gouache watercolor picture-book illustration, dark warm brown pencil contours, warm cream/caramel/sage/terracotta palette, soft grain, simple rounded silhouettes, polished charming 2D game assets. No ground, no shadows outside characters, no text, no symbols, no logos, no watermark. Each bust fits completely in its quadrant with 10 percent blank transparent margin. Square 1024x1024 atlas."
+    },
+    {
+      "path": "assets/resources/art/ingredients.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent 2x2 game prop atlas, four equal square cells, isolated objects with generous 12% transparent padding within every cell. Match cozy warm gouache hand-painted storybook bubble tea shop style, warm brown pencil contours, paper texture, caramel/sage/cream palette. EXACTLY four items: top left a round clear glass pitcher full of amber black tea with sage handle; top right a little cream ceramic milk jug with visible white milk and tiny simple leaf decoration; bottom left a squat open glass jar filled with glossy dark tapioca pearls and a wooden scoop; bottom right a squat open glass jar filled with ivory coconut jelly cubes and a wooden scoop. Frontal slight top-down view appropriate for countertop game buttons. Each object centered in its own equal quadrant, never cross quadrant boundaries. No text no labels no letters no backdrop no floor no cast shadow outside object no watermark. Transparent background. Square image."
+    }
+  ]
+}
