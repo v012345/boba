@@ -1,0 +1,5 @@
+{
+  "source": "art/shop",
+  "rect": { "x": 0, "y": 610, "width": 1672, "height": 260 },
+  "description": "从原背景提取的桌面与前沿，坐标为原图左上角像素；由 SpriteFrame 单独显示在顾客前方。"
+}

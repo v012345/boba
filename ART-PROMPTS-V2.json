@@ -1,0 +1,23 @@
+{
+  "tool": "Built-in image_gen",
+  "assets": [
+    {
+      "file": "cup-shelf.png",
+      "prompt": "Use case: stylized-concept. Transparent game asset, warm hand-painted gouache with warm brown pencil edges and wood grain, matching a cozy caramel wooden bubble tea shop. A single wide front-facing honey oak under-counter shelf unit with THREE equally sized open storage cubbies side-by-side. Completely EMPTY inside all three cubbies, deep dark brown shadowed interior, thick warm wood dividers and base, flat top rail. Entire unit fills image width with 3 percent transparent margins. Landscape 3:1 proportions. No countertop surface extending backwards, no objects, no cups, no text, no signs, no background. It will be placed under an existing wooden worktop as a game foreground sprite. Genuine transparent surrounding background."
+    },
+    {
+      "file": "service-props.png",
+      "prompt": "Transparent isolated game sprites on genuine empty transparent background. Four equal cells 2x2 grid. Warm storybook gouache illustration brown pencil outlines. Top left: a single tall neatly nested stack of six empty cream translucent plastic bubble tea cups with sage leaf emblem, all the same medium size. Top right: one sage green flat oval sealing lid seen slightly from above, horizontally centered, fills cell width but is very thin height. Bottom left: shallow rectangular ivory ceramic ingredient tray with rounded corners filled with shiny black tapioca pearls, a little wooden scoop resting inside. Bottom right: same shallow ceramic ingredient tray filled with ivory coconut jelly cubes with a small wooden scoop inside. Slight elevated front view, cohesive wood shop game art. 15 percent padding in each cell. NO table, NO brown background, NO backdrop, NO floor, NO lettering. Each object entirely separated on alpha transparency. Square atlas."
+    },
+    {
+      "file": "cup-states.png",
+      "prompt": "Square 1024x1024 transparent game asset atlas with EXACTLY FOUR isolated hand-painted objects in equal 2x2 quadrants, like sticker cutouts. Top left: one empty open clear plastic bubble tea cup. Top right: same cup filled halfway with amber black tea. Bottom left: same cup filled with beige milk tea, no toppings. Bottom right: same cup filled with beige milk tea and black tapioca pearls. Consistent same size aligned cup silhouettes, round oval rim, tapered base, warm brown contours, tiny sage green leaf emblem, warm watercolor gouache game style. No lids, no straws. Each object entirely inside its cell with wide transparent margins. Completely transparent background outside the cups, no scene, no floor, no shadows, no backdrop, no text."
+    },
+    {
+      "file": "cup-jelly-states.png",
+      "reference": "cup-states.png",
+      "prompt": "Edit this 2x2 transparent cup sprite atlas. Keep all cup shapes, sizes, positions, style, top row, and alpha transparency exactly unchanged. Change only the contents of the two BOTTOM cups: bottom left should be milk tea with visible ivory coconut jelly cubes at the bottom; bottom right should be milk tea with BOTH black tapioca pearls and ivory coconut jelly cubes visible at the bottom. Keep clear open rims and no lids. Preserve genuinely transparent space around the cups. No backdrop, no text."
+    }
+  ],
+  "table": "Original shop.png pixel region x=0 y=610 width=1672 height=260, runtime SpriteFrame extraction, original unchanged."
+}
