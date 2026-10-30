@@ -1,0 +1,43 @@
+{
+  "tool": "Built-in image_gen",
+  "reference": "assets/resources/art/machine-bin-parts/bin-open.png",
+  "canvas": [
+    1280,
+    1280
+  ],
+  "hingeApproxTopLeft": [
+    640,
+    500
+  ],
+  "assets": [
+    {
+      "file": "body.png",
+      "prompt": "Use case: precise-object-edit. Edit target attached image. Create ONE isolated trash bin BODY sprite for skeletal animation. REMOVE the lid completely and remove its two hinge blocks, retaining only the open-top bucket body with its complete rear rim reconstructed cleanly. Keep the exact sage-green painted metal, cream recycle symbol, perspective, body silhouette, lighting and warm hand-painted style. No redesign. Transparent background. Output square canvas: position the body in the LOWER part of the canvas, its bounding box approximately x=230..790, y=360..940 on a 1024x1024 canvas; the rear rim center/hinge axis is at x=512,y=380. Leave the top half empty to accommodate separately animated lid. No lid, no floating fragments, no cast shadow, no text. Preserve fully transparent outside pixels."
+    },
+    {
+      "frame": 0,
+      "prompt": "Use case: precise-object-edit. Image 1 is the original bin style/reference. Image 2 is the FINAL bucket-body layer which this separate lid must fit exactly when overlaid at identical canvas coordinates. Output only ONE LID, fully CLOSED (0 degrees), NO bucket body, NO recycle symbol. Same sage green rounded-rectangular metal lid, warm painterly cream edge highlight. Match perspective: horizontal lid top seen from slightly above. It covers the mouth in Image 2, back hinge line at canvas y=38%, lid spans x=21%..79%, front edge at y=60%. Keep its rear hinge axis centered at x=50%,y=38%. Same square canvas as Image 2, all other pixels fully transparent. Do not center or enlarge the lid; preserve the large empty space below and above. No sheet, no multiple objects, no shadow, no background, no text."
+    },
+    {
+      "frame": 1,
+      "prompt": "Use case: precise-object-edit. Edit the supplied isolated closed trash-bin lid into the next animation frame: slightly OPEN, lifted 18 degrees away from the horizontal closed position around the REAR hinge. Crucially preserve the same square canvas, exact two rear hinge positions at approximately x=37% and63%,y=40%, same center axis (50%,40%), same sage green painted lid design and cream edge style. Front edge should rise on screen from y=62% to about y=54%, creating a shallower foreshortened lid. Top surface still visible. NO translation of the hinge, NO recentering, NO resizing canvas, NO bucket body. Only one lid on actual transparent background. Keep blank space and artwork scale matching input. Animation frame 02 of six."
+    },
+    {
+      "frame": 2,
+      "prompt": "Edit target: isolated closed bin LID sprite. Make animation frame 03: lid rotated upward 36 degrees about its rear hinge, nearly EDGE-ON to viewer. A single rigid lid, no body, no second panel or duplicate lid. Preserve hinge blocks exactly at x37% and63%,y40% of the square canvas. Keep lid width x20%..80%. Projected lid silhouette should be a shallow rounded strip extending from rear hinge y40% to front lip y44%, about 4% canvas height plus rim thickness, because viewed nearly edge-on. Sage green metal, same warm hand-painted highlights, same design. True transparent background, square canvas same dimensions as input; do not recenter. Only rotate the lid in depth, no in-plane rotation. Large blank space above and below. No bucket, no symbols, no background."
+    },
+    {
+      "frame": 3,
+      "prompt": "Use case precise-object-edit. Reference 1 original bin open lid design; reference 2 closed isolated lid fixes canvas, width and hinge placement. Create ONLY the isolated lid at 54 degrees OPEN, frame 04 of opening sequence. LID RISES ABOVE THE REAR HINGE. The two hinge blocks are now at the BOTTOM edge of the lid, centered at x37% and63%, y40% on same square canvas. Lid top/front lifted edge at y27%, lid bottom rear hinged edge at y40%. Whole lid bounds approximately x22%..78%,y25%..42%. Show dark sage-green UNDERSIDE recessed panel now facing viewer, cream beveled edge, consistent painterly design as original open bin. No bin body, no rim of bin, no second lid. Large blank transparent space below y43%. Do not center the object in canvas, do not move hinges, no cast shadow, transparent background."
+    },
+    {
+      "frame": 4,
+      "prompt": "Edit reference lid (only one lid, transparent canvas). Animation frame 05, mostly open 72 degrees. Keep SAME sage-green underside and cream beveled rim, but raise leading edge higher above the two bottom hinges. On a square canvas, exact target bounds: lid width x20%..80%; raised top edge y10%; hinged bottom edge y40%; two hinge centers at x37% and63%, y40%. The lid is upright leaning back, dark inner panel facing viewer. Do not include a bucket. Do not crop or center automatically. Keep the lower 55% of canvas completely empty transparent. Only one rigid panel with two bottom hinge blocks. Same game art, no text, genuine transparent background."
+    },
+    {
+      "frame": 5,
+      "prompt": "Edit isolated lid into frame 06 FULLY OPEN (90 degrees, upright). Preserve exactly the existing lid design, sage-green underside inset, two warm metal hinge blocks. Hinge centers must remain at x37% and63%,y40% of square image. Raise top edge to y4%, lid bottom hinges at y40%; width x20%..80%. Show more height of dark underside than reference because lid now fully upright. One lid only, no bucket, no backdrop, no floor, no text. Genuine transparent background, same square canvas, large transparent region below the hinge. Do not move hinge axis or recenter the lid."
+    }
+  ],
+  "preparation": "Generated separately, then mechanically resized/repositioned onto matching transparent canvases. Minor extra lower flap trimmed from slight-open frame. Hand-painted generated animation frames, not physically exact 3D projections."
+}
