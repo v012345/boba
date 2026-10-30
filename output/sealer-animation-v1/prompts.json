@@ -1,0 +1,21 @@
+{
+  "mode": "built-in image_gen",
+  "prompts": [
+    {
+      "name": "body",
+      "prompt": "Use case: precise-object-edit. Edit target is the attached existing warm hand-painted sage green and cream bubble tea cup sealing machine. Produce ONE isolated stationary machine chassis sprite for Spine animation, transparent background. Keep original slight top-down frontal perspective with visible left side, proportions, soft brown outlines, cream control fascia and green metal. Reconstruct clean surfaces hidden behind moving parts. REMOVE the entire top film roll and loose film strip, leave two empty upright spindle supports. REMOVE the metal cup ring and its wood-colored supports leaving the dark open chamber clear. REMOVE any pressing head inside chamber, that is a separate future asset. Keep control knob and two indicator lights fixed. Keep bottom platform and feet. No cup, no floating parts, no exploded diagram, no text, no shadows outside object. Image framing full machine chassis centered with margin, matching reference silhouette. All holes and removed areas must be plausibly painted, absolutely no streaking or smeared cloning."
+    },
+    {
+      "name": "ring",
+      "prompt": "Use case: precise-object-edit. Reference is the hand-painted cup sealing machine. Generate ONE separate cup holder metal ring sprite, absolutely no machine or supports or cup. Warm brushed silver stainless steel, dark brown thin drawn outlines, cream highlights, same gentle top-down frontal perspective as the original holder. Ring is a perfectly centered horizontal ellipse viewed from above, outer ellipse width 800 pixels height 220 pixels, narrow band approx 38 pixels thick radially, short visible front vertical lip 24 pixels deep. Transparent empty hole and transparent exterior. Left-right symmetric, ellipse long axis perfectly horizontal. Ring complete closed circle in perspective. No shadow outside, no feet, no hinges, no text. Entire object centered with generous transparent margins. This is a single game asset used to derive back semicircle and two front quarter-ring clamp jaws; preserve uniform ring cross-section."
+    },
+    {
+      "name": "press_head",
+      "prompt": "Use case: precise-object-edit. Reference existing sage green cream hand painted boba cup sealing machine. Create ONE isolated movable thermal sealing press head for its open chamber. Sprite on transparent background, no machine no cup no text no flame. Same warm illustrated painterly style thin brown outlines brushed silver and brass. Short vertical steel piston centered above a horizontal squat cylindrical metal press plate, seen gently from above and front, long ellipse horizontal. Top of plate muted sage housing, bottom contact edge brass. Proportions: plate width 500, visible ellipse depth 100, plate thickness 40, straight centered piston height 110 width 60. Small pair of metal screw details. Contact underside flat, not a hollow ring. Not a plunger with handle. Compact industrial mechanism. Framed alone with generous margins; left-right symmetric."
+    },
+    {
+      "name": "roll",
+      "prompt": "Use case: precise-object-edit. Reference existing warm hand painted sage and cream tea cup sealing machine. Extract and complete ONLY its top roll of cream sealing film printed with muted olive green leaves. ONE isolated horizontal cylindrical film roll, transparent background. Slight top down front perspective with left circular end visible as narrow vertical ellipse. Full cylinder complete including bottom edge. No spindle supports, no machine, no metal axle, no hanging paper. Thin dark brown outline, soft cream paper texture, green leaf motifs. Keep cylinder length about 2.2 times its diameter. This will be a rotating roll animation sprite so clear fixed silhouette with generous empty margins. No text."
+    }
+  ]
+}
