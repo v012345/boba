@@ -1,0 +1,55 @@
+
+bin.png
+size: 1720,1077
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+images/body
+  rotate: true
+  xy: 2, 349
+  size: 726, 746
+  orig: 1280, 1280
+  offset: 277, 53
+  index: -1
+images/lid_00_closed
+  rotate: true
+  xy: 750, 331
+  size: 744, 305
+  orig: 1280, 1280
+  offset: 265, 509
+  index: -1
+images/lid_01_slight
+  rotate: false
+  xy: 2, 119
+  size: 725, 228
+  orig: 1280, 1280
+  offset: 272, 579
+  index: -1
+images/lid_02_small
+  rotate: false
+  xy: 2, 2
+  size: 719, 115
+  orig: 1280, 1280
+  offset: 278, 685
+  index: -1
+images/lid_03_half
+  rotate: true
+  xy: 1516, 390
+  size: 685, 202
+  orig: 1280, 1280
+  offset: 296, 759
+  index: -1
+images/lid_04_wide
+  rotate: false
+  xy: 729, 7
+  size: 677, 322
+  orig: 1280, 1280
+  offset: 299, 745
+  index: -1
+images/lid_05_open
+  rotate: true
+  xy: 1057, 430
+  size: 645, 457
+  orig: 1280, 1280
+  offset: 316, 744
+  index: -1

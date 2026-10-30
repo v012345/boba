@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, UITransform, Graphics, Color, Label, Layers, view, ResolutionPolicy, BlockInputEvents, Sprite, SpriteFrame, Texture2D, ImageAsset, resources, Rect, Size, game as engineGame, Game, EventTouch, Vec3, UIOpacity, screen as engineScreen } from 'cc';
+import { _decorator, Component, Node, UITransform, Graphics, Color, Label, Layers, view, ResolutionPolicy, BlockInputEvents, Sprite, SpriteFrame, Texture2D, ImageAsset, resources, Rect, Size, game as engineGame, Game, EventTouch, Vec3, UIOpacity, screen as engineScreen, sp } from 'cc';
 import { findDropTarget, findSnapTarget, dropZones, DropTarget } from './TeaDropTargets';
 import { TeaGame, RECIPES, INGREDIENT_NAMES, Ingredient, Cup, CUP_SUPPLIES } from './TeaGame';
 
@@ -37,6 +37,9 @@ export class TeaShop extends Component {
     private refreshIn = 0;
     private machine!: Sprite;
     private trash!: Sprite;
+    private binSkeleton: sp.Skeleton | null = null;
+    private binOpen = false;
+    private binDiscardTime = 0;
     private machineLabel!: Label;
     private deviceFrames: SpriteFrame[] = [];
     private dropHint!: Graphics;
@@ -140,6 +143,7 @@ export class TeaShop extends Component {
         this.watchOrientation();
         this.render();
         Promise.all([
+            this.loadBinSpine(),
             this.loadArt('machine-bin', texture => { this.deviceFrames = [0, 1, 2, 3].map(i => this.frame(texture, i)); this.machine.spriteFrame = this.deviceFrames[0]; this.trash.spriteFrame = this.deviceFrames[2]; }),
             this.loadArt('shop', texture => {
                 background.spriteFrame = this.frame(texture);
@@ -242,6 +246,47 @@ export class TeaShop extends Component {
             else lock();
         } catch (error) { console.warn('[TeaShop] 无法进入全屏', error); }
     }
+    private loadBinSpine(): Promise<void> {
+        return new Promise(resolve => {
+            resources.load('spines/bin/bin', sp.SkeletonData, (error, data) => {
+                if (!this.isValid) { resolve(); return; }
+                if (error) { console.warn('[TeaShop] 垃圾桶 Spine 加载失败，使用静态图片', error); resolve(); return; }
+                const node = this.nodeAt(this.trash.node, 'BinSpine', 0, 48, 1280, 1280);
+                node.setScale(0.17, 0.17, 1);
+                try {
+                    const skeleton = node.addComponent(sp.Skeleton);
+                    skeleton.setAnimationCacheMode(sp.Skeleton.AnimationCacheMode.REALTIME);
+                    skeleton.skeletonData = data;
+                    if (!['open', 'close', 'bounce'].every(name => skeleton.findAnimation(name))) {
+                        throw new Error('垃圾桶缺少 open、close 或 bounce 动画');
+                    }
+                    skeleton.setToSetupPose();
+                    // The first open frame is the closed lid; hold it without playing.
+                    const entry = skeleton.setAnimation(0, 'open', false);
+                    entry.timeScale = 0;
+                    this.binSkeleton = skeleton;
+                    this.trash.enabled = false;
+                } catch (error) {
+                    node.destroy();
+                    console.warn('[TeaShop] 垃圾桶 Spine 初始化失败，使用静态图片', error);
+                }
+                resolve();
+            });
+        });
+    }
+    private setBinOpen(open: boolean) {
+        if (this.binDiscardTime > 0) open = true;
+        if (this.deviceFrames.length) this.trash.spriteFrame = this.deviceFrames[open ? 3 : 2];
+        if (open === this.binOpen) return;
+        this.binOpen = open;
+        this.binSkeleton?.setAnimation(0, open ? 'open' : 'close', false);
+    }
+    private animateBinDiscard() {
+        // Keep the mouth open while the cup shrinks into it, then bounce and close.
+        this.binDiscardTime = 0.25;
+        this.setBinOpen(true);
+    }
+
     private loadArt(name: string, apply: (texture: Texture2D) => void): Promise<void> {
         return new Promise(resolve => resources.load(`art/${name}`, ImageAsset, (error, image) => {
             if (this.isValid && !error) {
@@ -270,6 +315,14 @@ export class TeaShop extends Component {
         if (!this.root) return;
         this.orientIn -= dt;
         if (this.orientIn <= 0) { this.orientIn = 0.4; this.checkOrientation(); }
+        if (this.binSkeleton) this.binSkeleton.paused = this.loading || this.portrait || !this.game.active;
+        if (this.game.active && !this.portrait && this.binDiscardTime > 0) {
+            this.binDiscardTime = Math.max(0, this.binDiscardTime - dt);
+            if (this.binDiscardTime === 0) {
+                this.binSkeleton?.setAnimation(1, 'bounce', false);
+                this.setBinOpen(this.hoverKey === 'trash0');
+            }
+        }
         if (this.loading || this.portrait) return;
         this.game.tick(dt);
         if (this.customers.some((ui, i) => (this.game.customers[i]?.id ?? -1) !== ui.id)) this.render();
@@ -431,11 +484,12 @@ export class TeaShop extends Component {
         const target = tap ? null : this.pickTarget(p);
         this.drag = null; this.hoverKey = '';
         this.resetGrip();
-        this.clearDropZones();
+        this.clearDropZones(!!target && target.kind === 'trash' && this.canAct());
         if (this.canAct()) {
             if (target && target.kind === 'trash') {
                 const cup: Cup = { ...this.game.cups[0], ingredients: [...this.game.cups[0].ingredients] };
                 this.game.discard(); this.inMachine = false;
+                this.animateBinDiscard();
                 const ghost = this.createDrink(this.fx, 'DiscardedCup', p.x, p.y);
                 this.drawCup(ghost, cup, 0, 0);
                 this.effect(ghost.node, 0.25, t => { ghost.node.setPosition(p.x + (-420 - p.x) * t, p.y + (-270 - p.y) * t); ghost.node.setScale(1 - t, 1 - t, 1); });
@@ -500,9 +554,9 @@ export class TeaShop extends Component {
         ui.art.node.setPosition(home.x, home.y, 0);
         ui.art.node.setScale(home.scale, home.scale, 1);
     }
-    private clearDropZones() {
+    private clearDropZones(keepBinOpen = false) {
         if (this.dropHint) this.dropHint.clear();
-        if (this.deviceFrames.length) this.trash.spriteFrame = this.deviceFrames[2];
+        this.setBinOpen(keepBinOpen);
     }
     private paintDropZones(hover: DropTarget | null) {
         const g = this.dropHint; if (!g) return;
@@ -517,7 +571,7 @@ export class TeaShop extends Component {
             g.lineWidth = hit ? 4 : 2;
             g.roundRect(r.x, r.y, r.width, r.height, hit ? 18 : 14); g.stroke();
         });
-        if (this.deviceFrames.length) this.trash.spriteFrame = this.deviceFrames[hover && hover.kind === 'trash' ? 3 : 2];
+        this.setBinOpen(!!hover && hover.kind === 'trash');
     }
     private grabPad(name: string, x: number, y: number, w: number, h: number) {
         const node = this.nodeAt(this.fx, name, x, y, w, h);
