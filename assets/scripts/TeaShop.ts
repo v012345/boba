@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, UITransform, Graphics, Color, Label, Layers, view, ResolutionPolicy, BlockInputEvents, Sprite, SpriteFrame, Texture2D, ImageAsset, resources, Rect, Size, game as engineGame, Game, EventTouch, Vec3, UIOpacity } from 'cc';
+import { _decorator, Component, Node, UITransform, Graphics, Color, Label, Layers, view, ResolutionPolicy, BlockInputEvents, Sprite, SpriteFrame, Texture2D, ImageAsset, resources, Rect, Size, game as engineGame, Game, EventTouch, Vec3, UIOpacity, screen as engineScreen } from 'cc';
 import { findDropTarget, findSnapTarget, dropZones, DropTarget } from './TeaDropTargets';
 import { TeaGame, RECIPES, INGREDIENT_NAMES, Ingredient, Cup, CUP_SUPPLIES } from './TeaGame';
 
@@ -45,6 +45,9 @@ export class TeaShop extends Component {
     private drag: { id: number; offset: Vec3; start: Vec3; target: Vec3; moved: number } | null = null;
     private grip = 0;
     private hoverKey = '';
+    private portrait = false;
+    private rotateHint: Node | null = null;
+    private orientIn = 0;
     private returnFrom = new Vec3();
     private returnScale = 1;
     private returnT = -1;
@@ -134,6 +137,7 @@ export class TeaShop extends Component {
             this.grabPad('MachineGrab', 125, -100, 200, 190),
         ];
         engineGame.on(Game.EVENT_HIDE, this.onHide, this);
+        this.watchOrientation();
         this.render();
         Promise.all([
             this.loadArt('machine-bin', texture => { this.deviceFrames = [0, 1, 2, 3].map(i => this.frame(texture, i)); this.machine.spriteFrame = this.deviceFrames[0]; this.trash.spriteFrame = this.deviceFrames[2]; }),
@@ -160,8 +164,84 @@ export class TeaShop extends Component {
         });
     }
 
-    private canAct() { return !this.loading && this.game.active; }
+    private canAct() { return !this.loading && !this.portrait && this.game.active; }
     private onHide() { this.cancelDrag(); if (!this.game.ended) { this.game.paused = true; this.render(); } }
+
+    // A browser page cannot force its own orientation, so landscape is requested in two
+    // steps: block play while the viewport is portrait, and offer a tap that goes
+    // fullscreen and calls screen.orientation.lock where the browser supports it.
+    private watchOrientation() {
+        this.orientIn = 0; this.checkOrientation();
+        if (typeof window === 'undefined' || !window.addEventListener) return;
+        window.addEventListener('resize', this.onViewportChange);
+        window.addEventListener('orientationchange', this.onViewportChange);
+    }
+    private readonly onViewportChange = () => {
+        this.checkOrientation();
+        // Some browsers report the canvas size a frame or two after the rotate event.
+        setTimeout(() => { if (this.isValid) this.checkOrientation(); }, 180);
+    };
+    private checkOrientation() {
+        const size = this.viewportSize();
+        if (size.width < 16 || size.height < 16) return;
+        const portrait = size.height > size.width * 1.02;
+        if (portrait === this.portrait) return;
+        this.portrait = portrait;
+        if (portrait) { this.cancelDrag(); this.showRotateHint(); }
+        else { this.hideRotateHint(); this.render(); }
+    }
+    /** CSS viewport on web (what the player actually holds), engine screen size on native. */
+    private viewportSize() {
+        if (typeof window !== 'undefined' && window.innerWidth > 0) return { width: window.innerWidth, height: window.innerHeight };
+        const size = engineScreen.windowSize;
+        return { width: size.width, height: size.height };
+    }
+    private showRotateHint() {
+        if (this.rotateHint || !this.root) return;
+        const node = this.nodeAt(this.root, 'RotateHint', 0, 0, 1280, 720);
+        this.panel(node, 1280, 720, '#2A211DF0', 0);
+        node.addComponent(BlockInputEvents);
+        const card = this.nodeAt(node, 'Card', 0, 0, 620, 380);
+        this.panel(card, 620, 380, C.cream, 26);
+        const phone = this.nodeAt(card, 'Phone', 0, 106, 170, 100).addComponent(Graphics);
+        phone.lineWidth = 8; phone.strokeColor = new Color(C.green);
+        phone.roundRect(-66, -36, 132, 72, 16); phone.stroke();
+        phone.lineWidth = 3; phone.strokeColor = new Color('#527B6299');
+        phone.roundRect(-50, -22, 100, 44, 7); phone.stroke();
+        this.text(card, '请把手机横过来', 0, 22, 540, 46, 33, C.ink);
+        this.text(card, '横屏才摆得下制作台、材料罐和客人。\n转回横屏自动继续，营业时间不会趁这段时间溜走。', 0, -46, 550, 80, 20, C.muted);
+        // iOS Safari has no orientation lock at all, so do not offer a dead button there.
+        if (this.canLockOrientation()) this.button(card, '全屏并锁定横屏', 0, -134, 330, 74, C.green, () => this.requestLandscape(), true);
+        else this.text(card, '这个浏览器不支持网页锁定方向\n请手动把手机转成横向', 0, -134, 530, 74, 19, C.muted);
+        this.rotateHint = node;
+    }
+    private canLockOrientation() {
+        if (typeof window === 'undefined' || !window.screen) return false;
+        const orientation: any = (window.screen as any).orientation;
+        return !!orientation && typeof orientation.lock === 'function';
+    }
+    private hideRotateHint() {
+        if (!this.rotateHint) return;
+        this.rotateHint.destroy(); this.rotateHint = null;
+    }
+    private requestLandscape() {
+        if (typeof document === 'undefined') return;
+        const lock = () => {
+            const orientation: any = typeof window !== 'undefined' && window.screen ? (window.screen as any).orientation : null;
+            if (!orientation || typeof orientation.lock !== 'function') return;
+            try {
+                const attempt = orientation.lock('landscape');
+                if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+            } catch (error) { console.warn('[TeaShop] 无法锁定横屏', error); }
+        };
+        const element: any = document.documentElement;
+        if (!element || !element.requestFullscreen) { lock(); return; }
+        try {
+            const attempt = element.requestFullscreen();
+            if (attempt && typeof attempt.then === 'function') attempt.then(lock, lock);
+            else lock();
+        } catch (error) { console.warn('[TeaShop] 无法进入全屏', error); }
+    }
     private loadArt(name: string, apply: (texture: Texture2D) => void): Promise<void> {
         return new Promise(resolve => resources.load(`art/${name}`, ImageAsset, (error, image) => {
             if (this.isValid && !error) {
@@ -187,7 +267,10 @@ export class TeaShop extends Component {
     }
 
     update(dt: number) {
-        if (!this.root || this.loading) return;
+        if (!this.root) return;
+        this.orientIn -= dt;
+        if (this.orientIn <= 0) { this.orientIn = 0.4; this.checkOrientation(); }
+        if (this.loading || this.portrait) return;
         this.game.tick(dt);
         if (this.customers.some((ui, i) => (this.game.customers[i]?.id ?? -1) !== ui.id)) this.render();
         if (this.game.ended) this.cancelDrag();
@@ -608,6 +691,11 @@ export class TeaShop extends Component {
     }
     onDestroy() {
         engineGame.off(Game.EVENT_HIDE, this.onHide, this);
+        if (typeof window !== 'undefined' && window.removeEventListener) {
+            window.removeEventListener('resize', this.onViewportChange);
+            window.removeEventListener('orientationchange', this.onViewportChange);
+        }
+        this.hideRotateHint();
         if (this.root) this.root.destroy();
         this.frames.forEach(frame => frame.destroy()); this.textures.forEach(texture => texture.destroy());
     }

@@ -37,6 +37,50 @@
 
 素材由内置 image_gen 生成。提示词和来源保存在 `ART-PROMPTS.json`、`ART-PROMPTS-V2.json`、`ART-PROMPTS-V3.json`。没有采用的带背景试稿未接入项目。UI 文本、进度、拖放提示、飞入的小料及部分临时配料叠加仍使用代码绘制。
 
+## 发布为 web-mobile（横屏）
+
+**先说结论：网页没法强制横屏。** 浏览器不给页面锁屏方向，iOS Safari 连 `screen.orientation.lock()` 都没有。所以这里用的是「竖屏拦截 + 能锁就锁」两层：
+
+1. **引擎内守卫（已内置，任何浏览器都生效）**：`TeaShop.checkOrientation()` 每 0.4 秒读一次视口尺寸（web 用 `window.innerWidth/innerHeight`，原生退回 `screen.windowSize`），宽高比变成竖屏就弹一张“请把手机横过来”的全屏卡，`BlockInputEvents` 挡住操作，`update` 直接 return，**计时和动画一起冻结**；转回横屏自动恢复并接着营业。卡片上的「全屏并锁定横屏」按钮会先 `requestFullscreen()`，成功后再调 `screen.orientation.lock('landscape')`——Android Chrome 有效，iOS 会静默失败，只剩引导。
+2. **页面级 meta（能覆盖微信/QQ 的 X5 内核、部分 Android WebView）**：需要覆盖构建产物的 `index.html`。做法是先构建一次，把产物里的 `index.html` 复制到 `build-templates/web-mobile/index.html`，只在 `<head>` 里加下面几行，再构建：
+
+```html
+<meta name="screen-orientation" content="landscape">
+<meta name="x5-orientation" content="landscape">
+<meta name="x5-fullscreen" content="true">
+<meta name="full-screen" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+```
+
+不要手写整个 `index.html`：3.8 的模板里有引擎脚本名和内联启动参数，抄错就是黑屏。一定要从自己的构建产物里复制再改。
+
+**PWA 路线**（添加到主屏后真正锁横屏）：在 `index.html` 旁边放 `manifest.json`，设 `"orientation": "landscape"`、`"display": "fullscreen"`，`<head>` 里加 `<link rel="manifest" href="./manifest.json">`。
+
+**平台差异**：桌面浏览器窗口拉窄也会触发横屏提示（同一条判定，无需特殊处理）；微信 iOS 里 `x5-orientation` 无效，只能靠卡片引导用户手动转；如果是小游戏/原生包，那才是有真正的方向配置（`game.json` 的 `deviceOrientation`、原生构建面板的方向选项），web-mobile 没有。
+
+## 部署到 GitHub Pages
+
+线上地址：<https://v012345.github.io/>，仓库在 `~/Desktop/work/v012345.github.io`（Pages 源 = `master` 分支根目录，直接指向仓库根，所以构建产物的 `index.html` 必须放在根目录）。
+
+**`.nojekyll` 是必须的。** 3.8 的产物里有 `cocos-js/_virtual_cc-*.js`，文件名以下划线开头，GitHub Pages 默认用 Jekyll 处理站点，会把下划线开头的文件过滤掉 → 该文件 404 → `cc` 模块加载失败 → 页面白屏。仓库根目录放一个空的 `.nojekyll` 即可关掉 Jekyll。
+
+同步命令（产物与线上完全一致，并自动保留 `.nojekyll`）：
+
+```sh
+tools/publish-pages.sh                # 默认 build/web-mobile -> ~/Desktop/work/v012345.github.io
+tools/publish-pages.sh build/web-mobile /path/to/v012345.github.io
+```
+
+推送后 Pages 重建约 30–60 秒。自检一条命令就够：
+
+```sh
+curl -o /dev/null -w '%{http_code}\n' https://v012345.github.io/cocos-js/_virtual_cc-C6aOtQS_.js
+```
+
+哈希会随每次构建变化，文件名以产物里的实际文件为准。
+
+已知无害噪音：控制台会有一条 `favicon.ico 404`，产物里没有这个文件，不影响运行；想要干净就丢一个 `favicon.ico` 到仓库根目录。
+
 ## 验证
 
 本轮 **20 项规则与拖放区域测试通过，项目类型检查通过**，没有启动游戏或做实际触控验收。
