@@ -1,4 +1,4 @@
-import { _decorator, Component } from 'cc';
+import { _decorator, Component, ResolutionPolicy, view } from 'cc';
 import { Flow, registerFlow } from './flow/GameFlow';
 import { app } from './GameApp';
 
@@ -11,6 +11,8 @@ registerFlow(app.flow);
 @ccclass('Main')
 export class Main extends Component {
     start() {
+        // 界面按 1280×720 设计。整屏等比缩放、不裁切，比例不同的屏幕会在两侧或上下留边。
+        view.setDesignResolutionSize(1280, 720, ResolutionPolicy.SHOW_ALL);
         app.ui.init(this.node);
         app.flow.change(Flow.Menu);
     }

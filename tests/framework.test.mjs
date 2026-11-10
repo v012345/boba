@@ -1,20 +1,9 @@
-// 直接用 Node 运行框架里不依赖引擎的 TypeScript 源码，不启动 Cocos，也不需要安装 tsc。
+// 框架里不依赖引擎的部分（事件总线、状态机）的测试，直接用 Node 运行 TypeScript 源码。
 // 用到引擎的部分（App、资源、界面、流程）不在这里测，需要在 Creator 预览里验证。
-// 需要 Node 22.18 以上（内置去除类型标注的能力）。运行：node tests/framework.test.mjs
+// 运行：node tests/framework.test.mjs
+import './ts-loader.mjs';
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
 import { test } from 'node:test';
-
-// 项目里的 import 按 Cocos 的习惯不写扩展名，这里替 Node 补上 .ts。
-registerHooks({
-    resolve(specifier, context, nextResolve) {
-        try { return nextResolve(specifier, context); }
-        catch (error) {
-            if (!specifier.startsWith('.')) throw error;
-            return nextResolve(specifier + '.ts', context);
-        }
-    },
-});
 
 const { EventBus } = await import('../assets/framework/core/EventBus.ts');
 const { StateMachine } = await import('../assets/framework/fsm/StateMachine.ts');

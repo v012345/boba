@@ -30,7 +30,7 @@
 - `assets/resources/art/shop.png`：原背景。桌面使用原图像素区域 `(0, 610, 1672, 260)` 单独创建 SpriteFrame，放在顾客前方。坐标说明在 `table-cutout.json`，不修改原图。
 - `customers.png`：四位客人图集。
 - `ingredients.png`：红茶壶与奶壶。
-- `cup-shelf.png`：桌下三格柜体；当前只使用中间共用杯摞。未来 S／M／L 的供杯配置位于 `TeaGame.ts` 的 `CUP_SUPPLIES`，尚未开启杯型订单、定价和不同尺寸美术。
+- `cup-shelf.png`：桌下三格柜体；当前只使用中间共用杯摞。未来 S／M／L 的供杯配置位于 `assets/game/logic/TeaGame.ts` 的 `CUP_SUPPLIES`，尚未开启杯型订单、定价和不同尺寸美术。
 - `service-props.png`：杯摞、封口膜、珍珠料盘、椰果料盘。
 - `cup-states.png`、`cup-jelly-states.png`：空杯、茶底、四种奶茶成品图片。杯子在桌面、订单和拖动时复用相同美术。
 - `machine-bin.png`：2×2 图集，依次为待机封盖机、工作封盖机、垃圾桶、打开垃圾桶。
@@ -83,26 +83,29 @@ curl -o /dev/null -w '%{http_code}\n' https://v012345.github.io/cocos-js/_virtua
 
 ## 验证
 
-本轮 **20 项规则与拖放区域测试通过，项目类型检查通过**，没有启动游戏或做实际触控验收。
+本轮 **21 项规则与拖放区域测试、12 项框架测试通过，项目类型检查通过**；新架构的菜单、HUD、暂停、结算在 Creator 浏览器预览里点过一遍，旧玩法没有做触控验收。
 
 ```sh
-node tests/game.test.cjs
-node tests/framework.test.mjs   # 框架里不依赖引擎的部分（事件总线、状态机），需要 Node 22.18+，不依赖 tsc
-tsc --noEmit --skipLibCheck --ignoreDeprecations 6.0
+node tests/game.test.mjs        # 奶茶规则与拖放区域
+node tests/framework.test.mjs   # 框架里不依赖引擎的部分（事件总线、状态机）
+npx -p typescript@5.9 tsc --noEmit --skipLibCheck -p .
 ```
 
-需要本机 Node.js 和 TypeScript。后者参数适用于本机 TypeScript 6，其他版本可去掉 `--ignoreDeprecations 6.0`。`skipLibCheck` 跳过 Creator 引擎声明文件内部错误，仍检查项目脚本。
+两个测试直接运行 TypeScript 源码，需要 Node 22.18 以上，不需要安装 tsc；运行时 Node 会打印一条 `MODULE_TYPELESS_PACKAGE_JSON` 警告，可以忽略。类型检查要用 TypeScript 5.x，TypeScript 7 不再支持 Creator 生成的配置里的 `moduleResolution` 选项。`skipLibCheck` 跳过 Creator 引擎声明文件内部错误，仍检查项目脚本。
 
 请重点测试：手机上是否容易抓住杯子、从机器取成品是否顺手、拖到客人和垃圾桶是否准确、取消拖动或切后台后是否正确回位。封盖计时、资源显示、坐标换算和触控事件的实际表现仍需 Creator / 真机预览确认。
 
 ## 代码
 
-- `TeaGame.ts`：纯规则、顾客点单与耐心、单杯占位、封盖、交付和丢弃。
-- `TeaShop.ts`：美术、触控拖动、动画、界面和暂停。
-- `TeaDropTargets.ts`：拖放区域定义与命中判定，与高亮区域共用。
-- `tests/game.test.cjs`：独立脚本测试，不启动 Cocos 游戏。
-- `assets/framework/`：通用框架（事件总线、状态机、资源加载、界面管理、`App`），不含奶茶相关内容。整体规划见 `架构.md`。
-- `assets/game/`：按新架构搭的游戏骨架，目前有主菜单、占位的营业页和结算弹窗三个流程，入口是 `assets/scenes/boot.scene`。玩法还没迁移过来，现有玩法仍由 `load` 场景和 `assets/scripts/` 提供。
+项目正在从旧结构迁移到新架构（整体规划见 `架构.md`），两套入口暂时并存：
+
+- 旧玩法（`load` 场景）：`assets/scripts/TeaShop.ts` 负责美术、触控拖动、动画、界面和暂停；`TeaDropTargets.ts` 是拖放区域定义与命中判定。
+- 新架构（`assets/scenes/boot.scene`）：目前有主菜单、营业中的 HUD、暂停和结算，制作台画面还没迁移，营业时中间是空的。
+  - `assets/framework/`：通用框架（事件总线、状态机、资源加载、界面管理、圆角底板组件、`App`），不含奶茶相关内容。
+  - `assets/game/logic/TeaGame.ts`：纯规则、顾客点单与耐心、单杯占位、封盖、交付和丢弃。新旧两套入口共用。
+  - `assets/game/flow/`、`assets/game/ui/`：流程状态和界面组件。
+  - `assets/resources/prefabs/ui/`：界面预制体，布局、文字、颜色在 Creator 里调整。
+- `tests/`：独立脚本测试，不启动 Cocos 游戏。
 
 当前未加入音效、存档、升级系统或逐帧表情。
 

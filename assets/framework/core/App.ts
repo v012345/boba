@@ -19,7 +19,7 @@ export class App<Events extends object> {
     /** 资源加载与释放。 */
     readonly res = new ResManager();
     /** 界面管理。使用前需要先 app.ui.init(Canvas 节点)。 */
-    readonly ui = new UIManager();
+    readonly ui = new UIManager(this.res);
     /** 游戏流程状态机，状态回调拿到的上下文就是 app 本身。 */
     readonly flow: StateMachine<App<Events>> = new StateMachine<App<Events>>(this);
 

@@ -1,6 +1,6 @@
 import { _decorator, Component, Node, UITransform, Graphics, Color, Label, Layers, view, ResolutionPolicy, BlockInputEvents, Sprite, SpriteFrame, Texture2D, ImageAsset, resources, Rect, Size, game as engineGame, Game, EventTouch, Vec3, UIOpacity, screen as engineScreen, sp } from 'cc';
 import { findDropTarget, findSnapTarget, dropZones, DropTarget } from './TeaDropTargets';
-import { TeaGame, RECIPES, INGREDIENT_NAMES, Ingredient, Cup, CUP_SUPPLIES } from './TeaGame';
+import { TeaGame, RECIPES, INGREDIENT_NAMES, Ingredient, Cup, CUP_SUPPLIES } from '../game/logic/TeaGame';
 
 const { ccclass } = _decorator;
 const C = { ink: '#513B30', muted: '#8C7560', cream: '#FFF8E8', green: '#527B62', mint: '#E6EDDA', red: '#BD6652', gold: '#D49A4C' };

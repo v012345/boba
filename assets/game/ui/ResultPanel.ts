@@ -1,32 +1,38 @@
-import { _decorator } from 'cc';
-import { createButton, createLabel, createNode, fillBackground } from '../../framework/ui/UIKit';
+import { _decorator, Button, Label } from 'cc';
 import type { UILayer } from '../../framework/ui/UIManager';
 import { UIPanel } from '../../framework/ui/UIPanel';
-import { PrimaryButton, SecondaryButton, Theme } from './Theme';
+import type { SessionSummary } from '../GameEvents';
 
-const { ccclass } = _decorator;
+const { ccclass, property } = _decorator;
 
 export interface ResultParams {
-    money: number;
-    target: number;
+    summary: SessionSummary;
     /** 点击「再开一局」。 */
     onRestart: () => void;
     /** 点击「回主菜单」。 */
     onMenu: () => void;
 }
 
-/** 结算弹窗：显示这一局的营业额，叠在营业页面之上。 */
+/** 结算弹窗：显示这一局的成绩，叠在营业页面之上。布局在 resources/prefabs/ui/Result.prefab 里。 */
 @ccclass('ResultPanel')
 export class ResultPanel extends UIPanel<ResultParams> {
+    static prefab = 'prefabs/ui/Result';
     static layer: UILayer = 'popup';
 
+    @property(Label)
+    titleLabel: Label = null!;
+    @property(Label)
+    detailLabel: Label = null!;
+    @property(Button)
+    restartButton: Button = null!;
+    @property(Button)
+    menuButton: Button = null!;
+
     onOpen(params: ResultParams) {
-        const reached = params.money >= params.target;
-        const card = createNode(this.node, 'Card', 0, 0, 640, 400);
-        fillBackground(card, Theme.cream, 24);
-        createLabel(card, reached ? '今日目标达成！' : '打烊啦，再接再厉', 0, 120, 580, 60, 38, Theme.green);
-        createLabel(card, `营业额 ¥${params.money} / ¥${params.target}`, 0, 30, 560, 50, 30, Theme.ink);
-        createButton(card, '再开一局', -150, -110, 260, 80, PrimaryButton, params.onRestart);
-        createButton(card, '回主菜单', 150, -110, 260, 80, SecondaryButton, params.onMenu);
+        const { money, target, served, lost, bestCombo } = params.summary;
+        this.titleLabel.string = money >= target ? '今日目标达成！' : '打烊啦，再接再厉';
+        this.detailLabel.string = `营业额 ¥${money} / ¥${target}\n完成 ${served} 单 · 流失 ${lost} 位\n最高连击 ${bestCombo}`;
+        this.restartButton.node.on(Button.EventType.CLICK, params.onRestart);
+        this.menuButton.node.on(Button.EventType.CLICK, params.onMenu);
     }
 }

@@ -1,3 +1,6 @@
+import type { EventBus } from '../../framework/core/EventBus';
+import type { GameEvents } from '../GameEvents';
+
 /** Engine-independent game rules. All durations are in seconds. */
 export type Ingredient = 'tea' | 'milk' | 'pearl' | 'jelly';
 export type CupSize = 'S' | 'M' | 'L';
@@ -37,7 +40,14 @@ export class TeaGame {
     message = '客人已经点单，直接取杯制作。先点击桌下杯子，把空杯放上桌。';
     private nextId = 1;
     private spawnIn = 4;
-    constructor(private random: () => number = Math.random) { this.spawn(0); }
+    private random: () => number;
+    private events: EventBus<GameEvents> | undefined;
+    /** events is optional: pass the game's event bus to be told when the session ends. */
+    constructor(random: () => number = Math.random, events?: EventBus<GameEvents>) {
+        this.random = random;
+        this.events = events;
+        this.spawn(0);
+    }
     private emptyCup(): Cup { return { ingredients: [], state: 'stored', remaining: 0 }; }
     // Customers order the moment they walk in: the bubble shows the recipe and the
     // patience bar starts ticking right away, so there is no accept step.
@@ -151,6 +161,9 @@ export class TeaGame {
             if (slot >= 0) { this.spawn(slot); this.spawnIn = Math.max(3, 6 - this.served * 0.15); }
             else this.spawnIn = 0;
         }
-        if (this.time === 0) { this.ended = true; this.message = '营业结束'; }
+        if (this.time === 0) {
+            this.ended = true; this.message = '营业结束';
+            this.events?.emit('session:ended', { money: this.money, target: this.target, served: this.served, lost: this.lost, bestCombo: this.bestCombo });
+        }
     }
 }
