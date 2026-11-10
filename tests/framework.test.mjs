@@ -1,5 +1,5 @@
-// 框架里不依赖引擎的部分（事件总线、状态机）的测试，直接用 Node 运行 TypeScript 源码。
-// 用到引擎的部分（App、资源、界面、流程）不在这里测，需要在 Creator 预览里验证。
+// 框架里不依赖引擎的部分（事件总线、状态机、动画驱动、落点判定）的测试，直接用 Node 运行 TypeScript 源码。
+// 用到引擎的部分（App、资源、界面、拖拽组件、流程）不在这里测，需要在 Creator 预览里验证。
 // 运行：node tests/framework.test.mjs
 import './ts-loader.mjs';
 import assert from 'node:assert/strict';
@@ -7,6 +7,83 @@ import { test } from 'node:test';
 
 const { EventBus } = await import('../assets/framework/core/EventBus.ts');
 const { StateMachine } = await import('../assets/framework/fsm/StateMachine.ts');
+const { Animator, easeOutCubic, easeOutQuad } = await import('../assets/framework/fx/Animator.ts');
+const { pickDrop, distanceToRect } = await import('../assets/framework/input/DropPick.ts');
+
+test('动画：按给定时间推进，结束时以 t=1 收尾并调用 done', () => {
+    const animator = new Animator();
+    const seen = [];
+    animator.run(1, t => seen.push(t), () => seen.push('done'));
+    animator.update(0.25);
+    animator.update(0.5);
+    assert.equal(animator.running, 1);
+    animator.update(0.5);
+    assert.deepEqual(seen, [0.25, 0.75, 1, 'done']);
+    assert.equal(animator.running, 0);
+    animator.update(1);
+    assert.deepEqual(seen, [0.25, 0.75, 1, 'done']);
+});
+
+test('动画：不调用 update 就不前进；时长为 0 的立即完成', () => {
+    const animator = new Animator();
+    const seen = [];
+    animator.run(0, t => seen.push(t), () => seen.push('done'));
+    assert.deepEqual(seen, [1, 'done']);
+    animator.run(0.3, t => seen.push(t));
+    assert.deepEqual(seen, [1, 'done']);
+    assert.equal(animator.running, 1);
+});
+
+test('动画：回调里登记的新动画下一帧才开始，clear 之后不再回调', () => {
+    const animator = new Animator();
+    const seen = [];
+    animator.run(0.1, () => {}, () => animator.run(1, t => seen.push(['chained', t])));
+    animator.run(1, t => seen.push(['other', t]));
+    animator.update(0.5);
+    assert.deepEqual(seen, [['other', 0.5]]);
+    animator.update(0.25);
+    assert.deepEqual(seen, [['other', 0.5], ['other', 0.75], ['chained', 0.25]]);
+
+    animator.run(1, () => { animator.clear(); seen.push('cleared'); });
+    animator.update(0.1);
+    assert.equal(animator.running, 0);
+    animator.update(1);
+    // 这一帧里排在 clear 之前的两个动画照常推进了一次，之后全部停止。
+    assert.deepEqual(seen.slice(3), [['other', 0.85], ['chained', 0.35], 'cleared']);
+});
+
+test('动画：缓动函数从 0 到 1，且先快后慢', () => {
+    for (const ease of [easeOutCubic, easeOutQuad]) {
+        assert.equal(ease(0), 0);
+        assert.equal(ease(1), 1);
+        assert.ok(ease(0.5) > 0.5);
+    }
+});
+
+test('落点：点在矩形内命中，靠前的优先；矩形外按 snapRadius 就近吸附', () => {
+    const bin = { rect: { x: -515, y: -309, width: 190, height: 118 }, snapRadius: 52, value: 'bin' };
+    const machine = { rect: { x: 22, y: -177, width: 206, height: 210 }, snapRadius: 52, value: 'machine' };
+    const customer = { rect: { x: -565, y: 48, width: 350, height: 220 }, snapRadius: 0, value: 'customer' };
+    const all = [bin, machine, customer];
+    assert.equal(pickDrop(all, 125, -116), 'machine');
+    assert.equal(pickDrop(all, -420, -249), 'bin');
+    assert.equal(pickDrop(all, -390, 140), 'customer');
+    assert.equal(pickDrop(all, 0, 140), null);
+    assert.equal(pickDrop(all, 0, 310), null);
+    // 设备接受「差一点」的松手，顾客必须准确命中。
+    assert.equal(pickDrop(all, 238, -190), 'machine');
+    assert.equal(pickDrop(all, -538, -250), 'bin');
+    assert.equal(pickDrop(all, -115, -88), null);
+    assert.equal(pickDrop(all, -390, 30), null);
+    assert.equal(pickDrop([], 0, 0), null);
+    // 两个都在吸附范围内时取更近的；重叠时取靠前的。
+    const left = { rect: { x: 0, y: 0, width: 10, height: 10 }, snapRadius: 50, value: 'left' };
+    const right = { rect: { x: 40, y: 0, width: 10, height: 10 }, snapRadius: 50, value: 'right' };
+    assert.equal(pickDrop([left, right], 30, 5), 'right');
+    assert.equal(pickDrop([left, right], 18, 5), 'left');
+    assert.equal(pickDrop([left, { ...right, rect: left.rect }], 5, 5), 'left');
+    assert.equal(distanceToRect(left.rect, 13, 14), 5);
+});
 
 test('事件：emit 把数据交给所有监听者，回调里的 this 是 target', () => {
     const bus = new EventBus();

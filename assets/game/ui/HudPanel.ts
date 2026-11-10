@@ -1,4 +1,5 @@
 import { _decorator, Button, Color, Label } from 'cc';
+import type { UILayer } from '../../framework/ui/UIManager';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import type { TeaGame } from '../logic/TeaGame';
 
@@ -11,10 +12,14 @@ export interface HudParams {
     onPause: () => void;
 }
 
-/** 营业中的 HUD：剩余时间、营业额、连击、提示语和暂停按钮。布局在 resources/prefabs/ui/Hud.prefab 里。 */
+/**
+ * 营业中的 HUD：剩余时间、营业额、连击、提示语和暂停按钮，浮在制作台页面之上。
+ * 布局在 resources/prefabs/ui/Hud.prefab 里。
+ */
 @ccclass('HudPanel')
 export class HudPanel extends UIPanel<HudParams> {
     static prefab = 'prefabs/ui/Hud';
+    static layer: UILayer = 'overlay';
 
     @property(Label)
     statusLabel: Label = null!;

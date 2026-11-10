@@ -1,11 +1,10 @@
-// 奶茶规则与拖放区域的测试：直接用 Node 运行 TypeScript 源码，不启动 Cocos。
+// 奶茶规则的测试：直接用 Node 运行 TypeScript 源码，不启动 Cocos。
 // 运行：node tests/game.test.mjs
 import './ts-loader.mjs';
 import assert from 'node:assert/strict';
 
 const { EventBus } = await import('../assets/framework/core/EventBus.ts');
 const { TeaGame, RECIPES } = await import('../assets/game/logic/TeaGame.ts');
-const { findDropTarget, findSnapTarget, dropZones } = await import('../assets/scripts/TeaDropTargets.ts');
 let count = 0;
 function test(name, run) { run(); count++; console.log(`✓ ${name}`); }
 function take(game, index = game.selected) { assert.equal(game.takeCup(index), true); game.tick(0.45); }
@@ -117,23 +116,6 @@ test('Empty and unfinished cups cannot seal or deliver; bin removes the entire c
     g.combo = 4; g.discard(); assert.equal(g.combo, 0);
     assert.equal(g.cups[0].state, 'stored'); assert.deepEqual(g.cups[0].ingredients, []);
 });
-test('Drag zones match machine, bin, occupied customers and reject empty space', () => {
-    const occupied = [true, false, true];
-    assert.equal(findDropTarget(125, -116, occupied).kind, 'machine');
-    assert.equal(findDropTarget(-420, -249, occupied).kind, 'trash');
-    assert.equal(findDropTarget(-390, 140, occupied).slot, 0);
-    assert.equal(findDropTarget(390, 200, occupied).slot, 2);
-    assert.equal(findDropTarget(0, 140, occupied), null);
-    assert.equal(findDropTarget(-115, -88, occupied), null);
-    assert.equal(findDropTarget(0, 310, occupied), null);
-    assert.equal(findDropTarget(-420, -320, occupied), null);
-    // Forgiving release: equipment accepts a near miss, customers never do.
-    assert.equal(findSnapTarget(238, -190, occupied, 52).kind, 'machine');
-    assert.equal(findSnapTarget(-538, -250, occupied, 52).kind, 'trash');
-    assert.equal(findSnapTarget(-115, -88, occupied, 52), null);
-    assert.equal(findSnapTarget(-390, 30, occupied, 52), null);
-    assert.equal(dropZones([true, false, false]).length, 3);
-});
 test('Grabbing a sliding cup finishes the placement immediately', () => {
     const g = new TeaGame(); g.takeCup(0); g.tick(0.1);
     assert.equal(g.cups[0].state, 'placing'); assert.equal(g.settlePlacement(), true);
@@ -164,5 +146,26 @@ test('Closing time reports the session summary once through the event bus', () =
     g.tick(60); assert.equal(seen.length, 0);
     g.tick(60); g.tick(1);
     assert.deepEqual(seen, [{ money: 18, target: 150, served: 1, lost: g.lost, bestCombo: 1 }]);
+});
+test('Arrivals, departures and sealing are announced on the event bus', () => {
+    const bus = new EventBus(), seen = [];
+    for (const name of ['customer:arrived', 'customer:left', 'cup:sealed']) bus.on(name, data => seen.push([name, data]));
+    const g = new TeaGame(() => 0, bus);
+    assert.deepEqual(seen, [['customer:arrived', { slot: 0 }]]);
+    make(g);
+    assert.deepEqual(seen[1], ['cup:sealed', { cup: 0 }]);
+    assert.equal(g.deliver(0), true);
+    assert.deepEqual(seen[2], ['customer:left', { slot: 0, served: true }]);
+    g.tick(4);
+    assert.deepEqual(seen[3], ['customer:arrived', { slot: 0 }]);
+    g.tick(40); // The new customer runs out of patience; the next one takes another slot.
+    assert.deepEqual(seen.slice(4), [['customer:left', { slot: 0, served: false }], ['customer:arrived', { slot: 1 }]]);
+});
+test('Actions report whether they took effect', () => {
+    const g = new TeaGame(); assert.equal(g.add('tea'), false); take(g);
+    assert.equal(g.add('milk'), false); assert.equal(g.add('tea'), true); assert.equal(g.add('tea'), false);
+    assert.equal(g.seal(), false); assert.equal(g.add('milk'), true); assert.equal(g.seal(), true);
+    assert.equal(g.discard(), false); g.tick(1);
+    assert.equal(g.discard(), true); assert.equal(g.discard(), false);
 });
 console.log(`${count} tests passed.`);

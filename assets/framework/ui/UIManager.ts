@@ -3,7 +3,21 @@ import type { ResManager } from '../res/ResManager';
 import { RoundRect } from './RoundRect';
 import type { UIPanel } from './UIPanel';
 
-export type UILayer = 'page' | 'popup';
+/**
+ * 界面层级，从下到上：
+ * - page：整页界面，同一时刻只有一个。
+ * - overlay：浮在页面上的常驻界面（比如 HUD），不挡下面的点击。
+ * - popup：弹窗，背后有遮罩，挡住对下面的点击。
+ * - top：最上层的系统提示（比如「请横屏」），同样带遮罩，换页时也不会被关掉。
+ */
+export type UILayer = 'page' | 'overlay' | 'popup' | 'top';
+
+const LAYERS: { layer: UILayer; nodeName: string; modal: boolean }[] = [
+    { layer: 'page', nodeName: 'PageLayer', modal: false },
+    { layer: 'overlay', nodeName: 'OverlayLayer', modal: false },
+    { layer: 'popup', nodeName: 'PopupLayer', modal: true },
+    { layer: 'top', nodeName: 'TopLayer', modal: true },
+];
 
 /** 界面类：能被 new 出来，并带有静态的 prefab 和 layer。 */
 export type PanelClass<Params> = (new () => UIPanel<Params>) & { prefab: string; layer: UILayer };
@@ -15,8 +29,8 @@ interface Entry { panelClass: PanelClass<any>; holder: Node | null; panel: UIPan
 
 /**
  * 界面管理：负责加载预制体、打开和关闭界面，并保证层级正确。
- * - 页面（page）同一时刻只有一个：新页面加载好后，会替换掉在它之前打开的所有界面。
- * - 弹窗（popup）叠在页面之上，背后自动加一层遮罩，挡住对下面的点击。
+ * 换页规则：新页面加载好后，会替换掉在它之前打开的所有界面（top 层除外）。
+ * 所以流程切换时只管打开新页面，不用手动关旧界面。
  */
 export class UIManager {
     /** 弹窗背后遮罩的颜色。 */
@@ -34,10 +48,9 @@ export class UIManager {
     /** 指定界面的根节点（一般是 Canvas）。每次进入新场景都要重新调用。 */
     init(root: Node): void {
         this.entries = [];
-        this.layers = {
-            page: createFullscreenNode(root, 'PageLayer'),
-            popup: createFullscreenNode(root, 'PopupLayer'),
-        };
+        const layers = {} as Record<UILayer, Node>;
+        for (const { layer, nodeName } of LAYERS) layers[layer] = createFullscreenNode(root, nodeName);
+        this.layers = layers;
     }
 
     /**
@@ -47,16 +60,17 @@ export class UIManager {
     open<Params>(panelClass: PanelClass<Params>, ...args: OpenArgs<Params>): Promise<void> {
         if (!this.layers) throw new Error('UIManager 尚未初始化，请先调用 init');
         if (!panelClass.prefab) throw new Error(`${panelClass.name} 没有填写 static prefab`);
-        // 同一个弹窗重复打开时，先关掉旧的。
-        if (panelClass.layer === 'popup') this.close(panelClass);
+        // 页面以外的界面重复打开时，先关掉旧的。页面要等新的就绪后再换，避免闪一下空屏。
+        if (panelClass.layer !== 'page') this.close(panelClass);
 
         const entry: Entry = { panelClass, holder: null, panel: null };
         this.entries.push(entry);
         return this.res.load(panelClass.prefab, Prefab).then(prefab => {
             const index = this.entries.indexOf(entry);
             if (index < 0 || !this.layers || !this.layers[panelClass.layer].isValid) return;
-            // 新页面就绪后再关掉旧界面，切换时不会闪一下空屏。
-            if (panelClass.layer === 'page') this.entries.slice(0, index).forEach(old => this.remove(old));
+            if (panelClass.layer === 'page') {
+                this.entries.slice(0, index).filter(old => old.panelClass.layer !== 'top').forEach(old => this.remove(old));
+            }
             this.show(entry, prefab, args[0] as Params);
         }).catch(error => {
             this.remove(entry);
@@ -84,7 +98,7 @@ export class UIManager {
         const { panelClass } = entry;
         const holder = createFullscreenNode(this.layers![panelClass.layer], panelClass.name || 'Panel');
         entry.holder = holder;
-        if (panelClass.layer === 'popup') {
+        if (LAYERS.some(item => item.layer === panelClass.layer && item.modal)) {
             holder.addComponent(RoundRect).color = this.maskColor;
             holder.addComponent(BlockInputEvents);
         }

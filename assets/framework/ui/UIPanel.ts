@@ -15,7 +15,7 @@ export abstract class UIPanel<Params = void> extends Component {
     /** 预制体路径，相对 resources 目录、不带扩展名。子类必须填写。 */
     static prefab = '';
 
-    /** 所在层级：'page' 是整页界面，'popup' 是叠在页面上的弹窗。子类按需覆盖。 */
+    /** 所在层级，默认是整页界面。各层的含义见 UIManager 里的 UILayer。子类按需覆盖。 */
     static layer: UILayer = 'page';
 
     /** 创建本界面的管理器，由 UIManager 填入。 */

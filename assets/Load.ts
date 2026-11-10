@@ -4,7 +4,7 @@ const { ccclass, property } = _decorator;
 @ccclass('Load')
 export class Load extends Component {
     start() {
-        director.loadScene('game', (err) => {
+        director.loadScene('boot', (err) => {
             if (err) {
                 console.error('场景加载失败：', err);
                 return;
