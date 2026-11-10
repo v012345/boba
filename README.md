@@ -87,7 +87,7 @@ curl -o /dev/null -w '%{http_code}\n' https://v012345.github.io/cocos-js/_virtua
 
 ```sh
 node tests/game.test.cjs
-node tests/framework.test.mjs   # 框架与流程骨架，需要 Node 22.18+，不依赖 tsc
+node tests/framework.test.mjs   # 框架里不依赖引擎的部分（事件总线、状态机），需要 Node 22.18+，不依赖 tsc
 tsc --noEmit --skipLibCheck --ignoreDeprecations 6.0
 ```
 
@@ -101,8 +101,8 @@ tsc --noEmit --skipLibCheck --ignoreDeprecations 6.0
 - `TeaShop.ts`：美术、触控拖动、动画、界面和暂停。
 - `TeaDropTargets.ts`：拖放区域定义与命中判定，与高亮区域共用。
 - `tests/game.test.cjs`：独立脚本测试，不启动 Cocos 游戏。
-- `assets/framework/`：通用框架骨架（事件总线、状态机、`App`），不含奶茶相关内容。整体规划见 `架构.md`。
-- `assets/game/`：按新架构搭的游戏骨架，目前只有流程状态，尚未挂进场景，现有玩法仍由 `assets/scripts/` 提供。
+- `assets/framework/`：通用框架（事件总线、状态机、资源加载、界面管理、`App`），不含奶茶相关内容。整体规划见 `架构.md`。
+- `assets/game/`：按新架构搭的游戏骨架，目前有主菜单、占位的营业页和结算弹窗三个流程，入口是 `assets/scenes/boot.scene`。玩法还没迁移过来，现有玩法仍由 `load` 场景和 `assets/scripts/` 提供。
 
 当前未加入音效、存档、升级系统或逐帧表情。
 

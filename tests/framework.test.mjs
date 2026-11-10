@@ -1,4 +1,5 @@
-// 直接用 Node 运行框架和流程的 TypeScript 源码，不启动 Cocos，也不需要安装 tsc。
+// 直接用 Node 运行框架里不依赖引擎的 TypeScript 源码，不启动 Cocos，也不需要安装 tsc。
+// 用到引擎的部分（App、资源、界面、流程）不在这里测，需要在 Creator 预览里验证。
 // 需要 Node 22.18 以上（内置去除类型标注的能力）。运行：node tests/framework.test.mjs
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
@@ -17,9 +18,6 @@ registerHooks({
 
 const { EventBus } = await import('../assets/framework/core/EventBus.ts');
 const { StateMachine } = await import('../assets/framework/fsm/StateMachine.ts');
-const { App } = await import('../assets/framework/core/App.ts');
-const { app } = await import('../assets/game/GameApp.ts');
-const { Flow } = await import('../assets/game/flow/GameFlow.ts');
 
 test('事件：emit 把数据交给所有监听者，回调里的 this 是 target', () => {
     const bus = new EventBus();
@@ -149,27 +147,13 @@ test('状态机：回调抛错后仍然可以继续切换', () => {
     assert.equal(fsm.current, 'ok');
 });
 
-test('App：update 驱动流程状态机，状态拿到的上下文是 app', () => {
-    const instance = new App();
+test('状态机：change 附带的数据交给新状态的 enter，排队的切换也不丢数据', () => {
     const seen = [];
-    instance.flow.add('run', { update: (ctx, dt) => seen.push([ctx === instance, dt]) });
-    instance.update(1);
-    instance.flow.change('run');
-    instance.update(0.016);
-    assert.deepEqual(seen, [[true, 0.016]]);
-});
-
-test('奶茶流程：营业中收到结束事件进入结算，离开营业后不再响应', () => {
-    const ended = { money: 160, target: 150 };
-    app.flow.change(Flow.Menu);
-    app.events.emit('session:ended', ended);
-    assert.equal(app.flow.current, Flow.Menu);
-
-    app.flow.change(Flow.Playing);
-    app.events.emit('session:ended', ended);
-    assert.equal(app.flow.current, Flow.Result);
-
-    app.flow.change(Flow.Menu);
-    app.events.emit('session:ended', ended);
-    assert.equal(app.flow.current, Flow.Menu);
+    const fsm = new StateMachine(null);
+    fsm.add('playing', { enter: () => fsm.change('result', { money: 160 }) });
+    fsm.add('result', { enter: (ctx, from, data) => seen.push([from, data]) });
+    fsm.change('result', { money: 20 });
+    fsm.change('result');
+    fsm.change('playing');
+    assert.deepEqual(seen, [[null, { money: 20 }], ['result', undefined], ['playing', { money: 160 }]]);
 });

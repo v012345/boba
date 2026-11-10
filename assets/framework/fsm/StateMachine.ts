@@ -6,8 +6,8 @@
  * 所以状态本身可以不存数据，多个对象能共用同一份状态定义。
  */
 export interface State<Ctx> {
-    /** 进入时调用。from 是上一个状态名，首次进入时为 null。 */
-    enter?(ctx: Ctx, from: string | null): void;
+    /** 进入时调用。from 是上一个状态名，首次进入时为 null；data 是 change 时附带的数据。 */
+    enter?(ctx: Ctx, from: string | null, data?: unknown): void;
     /** 处于该状态时每帧调用。 */
     update?(ctx: Ctx, dt: number): void;
     /** 离开时调用。to 是即将进入的状态名。 */
@@ -19,7 +19,7 @@ export class StateMachine<Ctx> {
     private states = new Map<string, State<Ctx>>();
     private currentName: string | null = null;
     private changing = false;
-    private pending: string | null = null;
+    private pending: { name: string; data: unknown } | null = null;
 
     constructor(ctx: Ctx) { this.ctx = ctx; }
 
@@ -36,22 +36,23 @@ export class StateMachine<Ctx> {
     is(name: string): boolean { return this.currentName === name; }
 
     /**
-     * 切换状态。切到当前状态会重新走一遍 exit 和 enter，可用于「再来一局」。
+     * 切换状态，data 会原样交给新状态的 enter（例如把结算数据带进结算状态）。
+     * 切到当前状态会重新走一遍 exit 和 enter，可用于「再来一局」。
      * 在 enter 或 exit 里再次调用 change 时，会等本次切换完成后再接着切。
      */
-    change(name: string): void {
+    change(name: string, data?: unknown): void {
         if (!this.states.has(name)) throw new Error(`状态未注册：${name}`);
-        if (this.changing) { this.pending = name; return; }
+        if (this.changing) { this.pending = { name, data }; return; }
         this.changing = true;
         try {
-            let to: string | null = name;
-            while (to !== null) {
+            let next: { name: string; data: unknown } | null = { name, data };
+            while (next !== null) {
                 this.pending = null;
                 const from = this.currentName;
-                if (from !== null) this.states.get(from)!.exit?.(this.ctx, to);
-                this.currentName = to;
-                this.states.get(to)!.enter?.(this.ctx, from);
-                to = this.pending;
+                if (from !== null) this.states.get(from)!.exit?.(this.ctx, next.name);
+                this.currentName = next.name;
+                this.states.get(next.name)!.enter?.(this.ctx, from, next.data);
+                next = this.pending;
             }
         } finally {
             this.changing = false;
