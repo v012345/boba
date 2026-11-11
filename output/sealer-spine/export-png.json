@@ -1,0 +1,10 @@
+{
+  "class": "export-png",
+  "scale": 50,
+  "background": { "r": 0.937, "g": 0.902, "b": 0.831, "a": 1 },
+  "fps": 30,
+  "animation": "seal",
+  "renderImages": true,
+  "renderBones": false,
+  "linear": true
+}

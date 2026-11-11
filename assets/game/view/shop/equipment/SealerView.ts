@@ -8,12 +8,8 @@ const { ccclass, property } = _decorator;
 /** 封盖机的画面、交互范围与停杯位置。封盖规则由 TeaGame 负责。 */
 @ccclass('SealerView')
 export class SealerView extends Component {
-    @property(Sprite)
-    machine: Sprite = null!;
     @property(SpriteFrame)
     idleFrame: SpriteFrame | null = null;
-    @property(SpriteFrame)
-    workingFrame: SpriteFrame | null = null;
     @property(Label)
     label: Label = null!;
     @property(FillBar)
@@ -30,7 +26,7 @@ export class SealerView extends Component {
         this.progress.set(cup.state === 'ready' ? 1 : sealing ? 1 - cup.remaining / duration : 0);
         this.label.string = sealing ? `封盖中 ${cup.remaining.toFixed(1)}s`
             : inMachine ? '封好了，拖给客人' : `拖入封盖 · ${duration}秒`;
-        const frame = sealing ? this.workingFrame : this.idleFrame;
-        if (this.machine.spriteFrame !== frame) this.machine.spriteFrame = frame;
+        // const frame = sealing ? this.workingFrame : this.idleFrame;
+        // if (this.machine.spriteFrame !== frame) this.machine.spriteFrame = frame;
     }
 }

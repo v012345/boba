@@ -1,0 +1,161 @@
+{
+"skeleton": { "hash": "6H/a1JlsYOQQ6RkGQ1czEWnHQDo", "spine": "3.8.99", "images": "./images/", "audio": "" },
+"bones": [
+	{ "name": "root" },
+	{ "name": "press_head", "parent": "root" },
+	{ "name": "cup", "parent": "root", "x": 58, "y": -277 }
+],
+"slots": [
+	{ "name": "body", "bone": "root", "attachment": "body" },
+	{ "name": "film", "bone": "root", "attachment": "film_00" },
+	{ "name": "roll", "bone": "root", "attachment": "roll_00" },
+	{ "name": "spindle_supports", "bone": "root", "attachment": "spindle_supports" },
+	{ "name": "clamp_supports", "bone": "root", "attachment": "clamp_supports" },
+	{ "name": "clamp_back", "bone": "root", "attachment": "clamp_back" },
+	{ "name": "cup", "bone": "cup", "attachment": "cup_preview" },
+	{ "name": "clamp_front", "bone": "root" },
+	{ "name": "press_head", "bone": "press_head", "attachment": "press_head" },
+	{ "name": "front_housing", "bone": "root", "attachment": "front_housing" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"body": {
+				"body": { "width": 1024, "height": 1024 }
+			},
+			"clamp_back": {
+				"clamp_back": { "width": 1024, "height": 1024 }
+			},
+			"clamp_front": {
+				"clamp_front_01": { "width": 1024, "height": 1024 },
+				"clamp_front_02": { "width": 1024, "height": 1024 },
+				"clamp_front_03": { "width": 1024, "height": 1024 },
+				"clamp_front_04": { "width": 1024, "height": 1024 },
+				"clamp_front_05": { "width": 1024, "height": 1024 }
+			},
+			"clamp_supports": {
+				"clamp_supports": { "width": 1024, "height": 1024 }
+			},
+			"cup": {
+				"cup_preview": { "x": -58, "y": 229, "width": 1024, "height": 1120 }
+			},
+			"film": {
+				"film_00": { "width": 1024, "height": 1024 },
+				"film_01": { "width": 1024, "height": 1024 },
+				"film_02": { "width": 1024, "height": 1024 },
+				"film_03": { "width": 1024, "height": 1024 },
+				"film_04": { "width": 1024, "height": 1024 },
+				"film_05": { "width": 1024, "height": 1024 }
+			},
+			"front_housing": {
+				"front_housing": { "width": 1024, "height": 1024 }
+			},
+			"press_head": {
+				"press_head": { "width": 1024, "height": 1024 }
+			},
+			"roll": {
+				"roll_00": { "width": 1024, "height": 1024 },
+				"roll_01": { "width": 1024, "height": 1024 },
+				"roll_02": { "width": 1024, "height": 1024 },
+				"roll_03": { "width": 1024, "height": 1024 },
+				"roll_04": { "width": 1024, "height": 1024 },
+				"roll_05": { "width": 1024, "height": 1024 }
+			},
+			"spindle_supports": {
+				"spindle_supports": { "width": 1024, "height": 1024 }
+			}
+		}
+	},
+	{
+		"name": "preview",
+		"attachments": {
+			"cup": {
+				"cup_preview": { "x": -58, "y": 229, "width": 1024, "height": 1120 }
+			}
+		}
+	}
+],
+"events": {
+	"clamp_closed": {},
+	"film_fed": {},
+	"lifted": {},
+	"pressed": {},
+	"released": {}
+},
+"animations": {
+	"idle": {
+		"bones": {
+			"press_head": {
+				"translate": [
+					{ "curve": "stepped" },
+					{ "time": 1 }
+				]
+			}
+		}
+	},
+	"seal": {
+		"slots": {
+			"clamp_front": {
+				"attachment": [
+					{ "name": null },
+					{ "time": 0.0333, "name": "clamp_front_01" },
+					{ "time": 0.0667, "name": "clamp_front_02" },
+					{ "time": 0.1, "name": "clamp_front_03" },
+					{ "time": 0.1333, "name": "clamp_front_04" },
+					{ "time": 0.1667, "name": "clamp_front_05" },
+					{ "time": 0.8333, "name": "clamp_front_04" },
+					{ "time": 0.8667, "name": "clamp_front_03" },
+					{ "time": 0.9, "name": "clamp_front_02" },
+					{ "time": 0.9333, "name": "clamp_front_01" },
+					{ "time": 0.9667, "name": null },
+					{ "time": 1, "name": null }
+				]
+			},
+			"film": {
+				"attachment": [
+					{ "name": "film_00" },
+					{ "time": 0.2, "name": "film_01" },
+					{ "time": 0.2333, "name": "film_02" },
+					{ "time": 0.2667, "name": "film_03" },
+					{ "time": 0.3, "name": "film_04" },
+					{ "time": 0.3333, "name": "film_05" },
+					{ "time": 0.9667, "name": "film_00" },
+					{ "time": 1, "name": "film_00" }
+				]
+			},
+			"roll": {
+				"attachment": [
+					{ "name": "roll_00" },
+					{ "time": 0.2, "name": "roll_01" },
+					{ "time": 0.2333, "name": "roll_02" },
+					{ "time": 0.2667, "name": "roll_03" },
+					{ "time": 0.3, "name": "roll_04" },
+					{ "time": 0.3333, "name": "roll_05" },
+					{ "time": 0.9667, "name": "roll_00" },
+					{ "time": 1, "name": "roll_00" }
+				]
+			}
+		},
+		"bones": {
+			"press_head": {
+				"translate": [
+					{ "curve": "stepped" },
+					{ "time": 0.3333 },
+					{ "time": 0.5, "y": -104, "curve": "stepped" },
+					{ "time": 0.6333, "y": -104 },
+					{ "time": 0.8, "curve": "stepped" },
+					{ "time": 1 }
+				]
+			}
+		},
+		"events": [
+			{ "time": 0.1667, "name": "clamp_closed" },
+			{ "time": 0.3333, "name": "film_fed" },
+			{ "time": 0.5, "name": "pressed" },
+			{ "time": 0.8, "name": "lifted" },
+			{ "time": 0.9667, "name": "released" }
+		]
+	}
+}
+}

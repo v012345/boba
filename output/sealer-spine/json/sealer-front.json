@@ -1,0 +1,272 @@
+{
+  "skeleton": {
+    "hash": "",
+    "spine": "3.8.99",
+    "x": -512,
+    "y": -512,
+    "width": 1024,
+    "height": 1024,
+    "fps": 30,
+    "images": "D:/boba/output/sealer-spine/images/",
+    "audio": ""
+  },
+  "bones": [
+    {
+      "name": "root"
+    },
+    {
+      "name": "press_head",
+      "parent": "root"
+    },
+    {
+      "name": "cup",
+      "parent": "root",
+      "x": 58,
+      "y": -277
+    }
+  ],
+  "slots": [
+    {
+      "name": "clamp_front",
+      "bone": "root"
+    },
+    {
+      "name": "press_head",
+      "bone": "press_head",
+      "attachment": "press_head"
+    },
+    {
+      "name": "front_housing",
+      "bone": "root",
+      "attachment": "front_housing"
+    }
+  ],
+  "skins": {
+    "default": {
+      "clamp_front": {
+        "clamp_front_01": {
+          "type": "region",
+          "path": "clamp_front_01",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        },
+        "clamp_front_02": {
+          "type": "region",
+          "path": "clamp_front_02",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        },
+        "clamp_front_03": {
+          "type": "region",
+          "path": "clamp_front_03",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        },
+        "clamp_front_04": {
+          "type": "region",
+          "path": "clamp_front_04",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        },
+        "clamp_front_05": {
+          "type": "region",
+          "path": "clamp_front_05",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "press_head": {
+        "press_head": {
+          "type": "region",
+          "path": "press_head",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      "front_housing": {
+        "front_housing": {
+          "type": "region",
+          "path": "front_housing",
+          "x": 0,
+          "y": 0,
+          "scaleX": 1,
+          "scaleY": 1,
+          "rotation": 0,
+          "width": 1024,
+          "height": 1024
+        }
+      }
+    }
+  },
+  "events": {
+    "clamp_closed": {},
+    "film_fed": {},
+    "pressed": {},
+    "lifted": {},
+    "released": {}
+  },
+  "animations": {
+    "idle": {
+      "bones": {
+        "press_head": {
+          "translate": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "time": 1,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
+      }
+    },
+    "seal": {
+      "slots": {
+        "clamp_front": {
+          "attachment": [
+            {
+              "time": 0,
+              "name": null
+            },
+            {
+              "time": 0.03333,
+              "name": "clamp_front_01"
+            },
+            {
+              "time": 0.06667,
+              "name": "clamp_front_02"
+            },
+            {
+              "time": 0.1,
+              "name": "clamp_front_03"
+            },
+            {
+              "time": 0.13333,
+              "name": "clamp_front_04"
+            },
+            {
+              "time": 0.16667,
+              "name": "clamp_front_05"
+            },
+            {
+              "time": 0.83333,
+              "name": "clamp_front_04"
+            },
+            {
+              "time": 0.86667,
+              "name": "clamp_front_03"
+            },
+            {
+              "time": 0.9,
+              "name": "clamp_front_02"
+            },
+            {
+              "time": 0.93333,
+              "name": "clamp_front_01"
+            },
+            {
+              "time": 0.96667,
+              "name": null
+            },
+            {
+              "time": 1,
+              "name": null
+            }
+          ]
+        }
+      },
+      "bones": {
+        "press_head": {
+          "translate": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "time": 0.33333,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "time": 0.5,
+              "x": 0,
+              "y": -104
+            },
+            {
+              "time": 0.63333,
+              "x": 0,
+              "y": -104
+            },
+            {
+              "time": 0.8,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "time": 1,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
+      },
+      "events": [
+        {
+          "time": 0.16667,
+          "name": "clamp_closed"
+        },
+        {
+          "time": 0.33333,
+          "name": "film_fed"
+        },
+        {
+          "time": 0.5,
+          "name": "pressed"
+        },
+        {
+          "time": 0.8,
+          "name": "lifted"
+        },
+        {
+          "time": 0.96667,
+          "name": "released"
+        }
+      ]
+    }
+  }
+}
