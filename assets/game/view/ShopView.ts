@@ -1,27 +1,35 @@
-import { _decorator, Button, Color, instantiate, Label, Node, Sprite, SpriteFrame, UITransform, Vec3 } from 'cc';
+import { _decorator, Button, Color, instantiate, Label, Node, Prefab, UITransform, Vec3 } from 'cc';
 import { Animator, easeOutCubic } from '../../framework/fx/Animator';
 import { Draggable, DragEndInfo } from '../../framework/input/Draggable';
 import { DropZone } from '../../framework/input/DropZone';
-import { FillBar } from '../../framework/ui/FillBar';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { app } from '../GameApp';
-import { Ingredient, INGREDIENT_NAMES, TeaGame } from '../logic/TeaGame';
-import { BinView } from './BinView';
-import { CupView } from './CupView';
-import { CustomerView } from './CustomerView';
-import { DrinkView } from './DrinkView';
-import { IngredientTray } from './IngredientTray';
+import { Ingredient, TeaGame } from '../logic/TeaGame';
+import type { ShopDefinition } from '../config/Shops';
+import { ShopLayout } from './shop/ShopLayout';
+import { BinView } from './shop/equipment/BinView';
+import { SealerView } from './shop/equipment/SealerView';
+import { CupSupplyView } from './shop/equipment/CupSupplyView';
+import { WorkstationView } from './shop/equipment/WorkstationView';
+import { CupView } from './shop/drinks/CupView';
+import { CustomerView } from './shop/customers/CustomerView';
+import { DrinkView } from './shop/drinks/DrinkView';
+import { IngredientTray } from './shop/ingredients/IngredientTray';
 
-const { ccclass, property } = _decorator;
+const { ccclass } = _decorator;
 
 export interface ShopParams {
     /** 当前这一局的规则对象。 */
     session: TeaGame;
+    shop: ShopDefinition;
+    layoutPrefab: Prefab;
+    /** 所有组件绑定完成后才开始营业计时。 */
+    onReady?: () => void;
 }
 
 /**
- * 制作台页面：顾客、配料、杯子、封盖机、垃圾桶。布局在 resources/prefabs/view/Shop.prefab 里。
+ * 店铺页面入口。具体摆放在 prefabs/shop/layouts，物件各自管理内部节点。
  *
  * 它是规则和画面之间的桥：
  * - 玩家的操作（点配料、取杯、拖杯子）在这里翻译成对规则的调用；
@@ -32,53 +40,18 @@ export interface ShopParams {
 export class ShopView extends UIPanel<ShopParams> {
     static prefab = 'prefabs/view/Shop';
 
-    @property({ type: [CustomerView], tooltip: '三个顾客站位，顺序对应规则里的 0、1、2 号位' })
-    customers: CustomerView[] = [];
-    @property(CupView)
-    cup: CupView = null!;
-    @property(BinView)
-    bin: BinView = null!;
-    @property({ type: DropZone, tooltip: '垃圾桶的放置区' })
-    binZone: DropZone = null!;
-    @property({ type: DropZone, tooltip: '封盖机的放置区' })
-    machineZone: DropZone = null!;
-    @property({ type: [IngredientTray], tooltip: '桌上的配料' })
-    trays: IngredientTray[] = [];
+    private customers: CustomerView[] = [];
+    private cup: CupView = null!;
+    private bin: BinView = null!;
+    private sealer: SealerView = null!;
+    private supply: CupSupplyView = null!;
+    private station: WorkstationView = null!;
+    private trays: IngredientTray[] = [];
+    private layout: ShopLayout = null!;
 
-    @property({ type: Button, tooltip: '杯摞，点击取杯' })
-    supplyButton: Button = null!;
-    @property(Label)
-    supplyLabel: Label = null!;
-    @property(Label)
-    stationDetail: Label = null!;
-    @property(Label)
-    stationStatus: Label = null!;
-    @property(FillBar)
-    sealBar: FillBar = null!;
-    @property(Sprite)
-    machine: Sprite = null!;
-    @property(SpriteFrame)
-    machineIdleFrame: SpriteFrame | null = null;
-    @property(SpriteFrame)
-    machineWorkingFrame: SpriteFrame | null = null;
-    @property(Label)
-    machineLabel: Label = null!;
-
-    @property({ type: Node, tooltip: '杯子在制作位上停放的位置' })
-    stationPoint: Node = null!;
-    @property({ type: Node, tooltip: '杯子在封盖机里停放的位置' })
-    machinePoint: Node = null!;
-    @property({ type: Node, tooltip: '取杯时杯子出发的位置' })
-    supplyPoint: Node = null!;
-    @property({ tooltip: '杯子在封盖机里缩小到多少倍' })
-    machineCupScale = 0.62;
-
-    @property({ type: Node, tooltip: '飞行的杯子、小颗粒、飘字都放在这一层' })
-    effects: Node = null!;
-    @property({ type: Node, tooltip: '加料小颗粒的模板' })
-    dropletTemplate: Node = null!;
-    @property({ type: Label, tooltip: '飘字的模板' })
-    floatTextTemplate: Label = null!;
+    private get binZone(): DropZone { return this.bin.dropZone; }
+    private get machineZone(): DropZone { return this.sealer.dropZone; }
+    private get effects(): Node { return this.layout.effects; }
 
     private session: TeaGame | null = null;
     private zones: DropZone[] = [];
@@ -92,23 +65,35 @@ export class ShopView extends UIPanel<ShopParams> {
     private supplyRest = new Vec3();
 
     onOpen(params: ShopParams) {
+        // 壳中的标准布局用于编辑器预览。运行时始终使用所选资产，复制布局后改名也不会选错。
+        const preview = this.getComponentInChildren(ShopLayout);
+        if (preview) { preview.node.active = false; preview.node.destroy(); }
+        const node = instantiate(params.layoutPrefab);
+        this.node.addChild(node);
+        const layout = node.getComponent(ShopLayout);
+        if (!layout) throw new Error(`${params.layoutPrefab.name} 缺少 ShopLayout 组件`);
+        this.layout = layout;
+        const parts = layout.configure(params.shop);
+        this.customers = parts.customers;
+        this.cup = parts.cup;
+        this.bin = parts.bin;
+        this.sealer = parts.sealer;
+        this.supply = parts.supply;
+        this.station = parts.station;
+        this.trays = parts.trays;
         const session = params.session;
+        if (session.customers.length !== this.customers.length) throw new Error('店铺规则和布局的客位数量不一致');
         this.session = session;
         this.customers.forEach((customer, slot) => customer.bind(session, slot));
         // 顺序即优先级：范围重叠时靠前的优先。
         this.zones = [this.binZone, this.machineZone, ...this.customers.map(customer => customer.dropZone)];
-        this.dropletTemplate.active = false;
-        this.floatTextTemplate.node.active = false;
-        const cupSpace = this.cup.node.parent!.getComponent(UITransform)!;
-        cupSpace.convertToNodeSpaceAR(this.stationPoint.worldPosition, this.stationRest);
-        cupSpace.convertToNodeSpaceAR(this.machinePoint.worldPosition, this.machineRest);
-        cupSpace.convertToNodeSpaceAR(this.supplyPoint.worldPosition, this.supplyRest);
+        this.updateRestPoints();
 
         app.events.on('customer:arrived', ({ slot }) => this.customers[slot].arrive(), this);
         app.events.on('customer:left', ({ slot, served }) => this.customers[slot].leave(served), this);
         app.events.on('cup:sealed', this.onSealed, this);
 
-        this.supplyButton.node.on(Button.EventType.CLICK, this.takeCup, this);
+        this.supply.button.node.on(Button.EventType.CLICK, this.takeCup, this);
         this.trays.forEach(tray => tray.node.on(Button.EventType.CLICK, () => this.addIngredient(tray), this));
         const grab = this.cup.grab;
         grab.canBegin = () => this.canGrab();
@@ -118,10 +103,19 @@ export class ShopView extends UIPanel<ShopParams> {
 
         this.refresh(0);
         this.cup.snap();
+        params.onReady?.();
     }
 
     onClose() {
         app.events.offTarget(this);
+        if (this.cup) {
+            this.cup.grab.cancel();
+            this.cup.grab.canBegin = null;
+            this.cup.grab.node.targetOff(this);
+        }
+        this.supply?.button.node.targetOff(this);
+        this.trays.forEach(tray => tray.node.targetOff(this));
+        this.session = null;
     }
 
     update(dt: number) {
@@ -144,13 +138,14 @@ export class ShopView extends UIPanel<ShopParams> {
 
     private refresh(dt: number) {
         const session = this.session!;
+        this.updateRestPoints();
         const cup = session.cups[0];
         const stored = cup.state === 'stored', placing = cup.state === 'placing', sealing = cup.state === 'sealing';
         if (stored || placing) this.inMachine = false;
 
         // 杯子该停在哪：封盖机里，或制作位上；刚取出的杯子从杯摞滑向制作位。
         if (this.inMachine) {
-            this.cup.setRest(this.machineRest.x, this.machineRest.y, this.machineCupScale);
+            this.cup.setRest(this.machineRest.x, this.machineRest.y, this.sealer.cupScale);
         } else {
             const station = this.stationRest, supply = this.supplyRest;
             const travel = placing ? Math.pow(cup.remaining / session.placeDuration, 2) : 0;
@@ -161,14 +156,17 @@ export class ShopView extends UIPanel<ShopParams> {
         this.cup.drink.show(cup.ingredients, sealing || cup.state === 'ready', sealing ? this.clock : undefined);
         if (this.cup.dragging) this.updateHover();
 
-        this.stationDetail.string = stored ? '从桌下取一只杯子' : placing ? '正在放上桌…' : cup.ingredients.map(i => INGREDIENT_NAMES[i]).join(' + ');
-        this.stationStatus.string = stored ? '等待取杯' : placing ? '' : cup.state === 'empty' ? '点击材料加料'
-            : cup.state === 'making' ? '拖到右侧封盖机' : sealing ? `封杯中 ${cup.remaining.toFixed(1)}s` : '✓ 从机器拖给客人';
-        this.sealBar.set(cup.state === 'ready' ? 1 : sealing ? 1 - cup.remaining / session.sealDuration : 0);
-        this.supplyLabel.string = stored ? '共用空杯\n点击取一只' : '制作位已满';
-        this.machineLabel.string = sealing ? `封盖中 ${cup.remaining.toFixed(1)}s` : this.inMachine ? '封好了，拖给客人' : `拖入封盖 · ${session.sealDuration}秒`;
-        const machineFrame = sealing ? this.machineWorkingFrame : this.machineIdleFrame;
-        if (this.machine.spriteFrame !== machineFrame) this.machine.spriteFrame = machineFrame;
+        this.station.show(cup);
+        this.supply.show(stored);
+        this.sealer.show(cup, this.inMachine, session.sealDuration);
+    }
+
+    /** 锚点跟随物件摆放；布局缩放或窗口变化后仍用正确的杯子父节点坐标。 */
+    private updateRestPoints(): void {
+        const cupSpace = this.cup.node.parent!.getComponent(UITransform)!;
+        cupSpace.convertToNodeSpaceAR(this.station.cupPoint.worldPosition, this.stationRest);
+        cupSpace.convertToNodeSpaceAR(this.sealer.cupPoint.worldPosition, this.machineRest);
+        cupSpace.convertToNodeSpaceAR(this.supply.cupPoint.worldPosition, this.supplyRest);
     }
 
     // ---------- 点击 ----------
@@ -186,7 +184,7 @@ export class ShopView extends UIPanel<ShopParams> {
         const start = this.toEffects(tray.node.worldPosition), target = this.toEffects(this.cup.node.worldPosition);
         const startY = start.y + 15;
         for (let i = 0; i < 5; i++) {
-            const node = instantiate(this.dropletTemplate);
+            const node = instantiate(this.layout.dropletPrefab);
             node.active = true;
             node.getComponent(UITransform)!.setContentSize(tray.dropSize, tray.dropSize);
             const shape = node.getComponent(RoundRect)!;
@@ -266,10 +264,10 @@ export class ShopView extends UIPanel<ShopParams> {
         this.inMachine = false;
         this.bin.swallow();
         const mouth = this.toEffects(this.bin.mouth.worldPosition);
-        const scale = ghost.scale.x;
+        const scale = ghost.scale.clone();
         this.animator.run(this.bin.swallowTime, t => {
             ghost.setPosition(point.x + (mouth.x - point.x) * t, point.y + (mouth.y - point.y) * t);
-            ghost.setScale(scale * (1 - t), scale * (1 - t), 1);
+            ghost.setScale(scale.x * (1 - t), scale.y * (1 - t), scale.z);
         }, () => ghost.destroy());
         return true;
     }
@@ -285,11 +283,11 @@ export class ShopView extends UIPanel<ShopParams> {
             return;
         }
         this.inMachine = false;
-        const end = this.toEffects(customer.worldPoint(customer.receiveOffsetY)), scale = ghost.scale.x;
+        const end = this.toEffects(customer.worldPoint(customer.receiveOffsetY)), scale = ghost.scale.clone();
         this.animator.run(0.5, t => {
-            const ease = easeOutCubic(t), shrink = scale * (1 - t * 0.45);
+            const ease = easeOutCubic(t), shrink = 1 - t * 0.45;
             ghost.setPosition(point.x + (end.x - point.x) * ease, point.y + (end.y - point.y) * ease + Math.sin(t * Math.PI) * 25);
-            ghost.setScale(shrink, shrink, 1);
+            ghost.setScale(scale.x * shrink, scale.y * shrink, scale.z);
         }, () => ghost.destroy());
         const reward = this.toEffects(customer.worldPoint(customer.rewardOffsetY));
         this.floatText(`+¥${session.money - before}${session.combo > 1 ? `  连击 ×${session.combo}` : ''}`, reward.x, reward.y);
@@ -297,7 +295,7 @@ export class ShopView extends UIPanel<ShopParams> {
 
     private onSealed() {
         this.cup.pulse();
-        const machine = this.toEffects(this.machinePoint.worldPosition);
+        const machine = this.toEffects(this.sealer.cupPoint.worldPosition);
         this.floatText('封好啦！', machine.x, machine.y + 128);
     }
 
@@ -315,16 +313,17 @@ export class ShopView extends UIPanel<ShopParams> {
         const ghost = instantiate(source);
         this.effects.addChild(ghost);
         ghost.setPosition(point);
-        ghost.setScale(source.scale);
+        ghost.setWorldScale(source.worldScale);
+        ghost.setWorldRotation(source.worldRotation);
         ghost.getComponent(DrinkView)!.show(cup.ingredients, cup.state === 'sealing' || cup.state === 'ready');
         return ghost;
     }
 
     /** 一行向上飘走并淡出的文字。 */
     private floatText(text: string, x: number, y: number) {
-        const node = instantiate(this.floatTextTemplate.node);
+        const node = instantiate(this.layout.floatTextPrefab);
         const label = node.getComponent(Label)!;
-        const color = this.floatTextTemplate.color;
+        const color = label.color.clone();
         node.active = true;
         label.string = text;
         node.setPosition(x, y);

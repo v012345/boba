@@ -1,14 +1,19 @@
 # 巷口奶茶铺 · Cocos Creator 3.8.8
 
-暖色手绘风手机横屏奶茶店原型。直接营业，90 秒内争取 ¥150。当前采用 **一个制作位、一摞共用杯子、拖放封盖与交付**。
+暖色手绘风手机横屏奶茶店原型。默认标准店营业 90 秒，目标 ¥150；也可切换小店和高档店。当前各店采用 **一个制作位、一摞共用杯子、拖放封盖与交付**。
 
 ## 在 Creator 里试玩
 
 打开 `assets/scenes/boot.scene` 预览即可：主菜单 → 营业 → 结算。`load` 场景只做一件事，就是跳转到 `boot`。
 
 画面都是预制体，在 Creator 里双击就能调整布局、文字和颜色：
-- `assets/resources/prefabs/view/Shop.prefab`：制作台（顾客、配料、杯子、封盖机、垃圾桶、放置区）。
+
+- `assets/resources/prefabs/view/Shop.prefab`：店铺入口壳，内嵌标准布局供编辑器预览，运行时加载所选店铺布局。
+- `assets/resources/prefabs/shop/layouts/`：`SmallShop`、`StandardShop`、`LargeShop` 三套组合布局。
+- `assets/resources/prefabs/shop/` 的其他分类目录：垃圾桶、封盖机、取杯器、制作位、原料、饮品、顾客、环境和特效，可作为独立 Prefab 拖入布局。
 - `assets/resources/prefabs/ui/`：主菜单、HUD、暂停、结算、横屏提示。
+
+在 `boot.scene` 的 `Canvas` 节点上，将 `Main` 组件的 `shopId` 设为 `basic`、`standard` 或 `premium`，保存后预览。三者分别提供 2、3、4 个顾客位；小店没有椰果，标准店保留渐进解锁，高档店开店即可制作全部四种饮品。重新营业、返回菜单后再开始会保持所选店铺。详细目录、物件编辑和新增店铺步骤见 [店铺组合指南](docs/shop-composition.md)。
 
 按 1280×720 设计，使用 SHOW_ALL 适配，宽屏可能留边。网页在手机上手动横屏；原生构建在构建面板设置横屏。异形屏安全区和触控手感仍需真机验收。
 
@@ -25,7 +30,7 @@
 
 未封盖或配方错误时保留杯子。配方错误扣客人 5 秒耐心并重置连击。触摸取消、暂停、切后台会取消当前拖动，不触发丢弃或交付。封盖与所有动画在暂停时冻结。
 
-第一单固定原味；完成 2 单解锁椰果，5 单解锁双拼。耐心从进店起算，初始 40 秒，每交付一单递减 0.8 秒（最低 26 秒）——原来「思考 2.5 秒 + 接单」的免费时间已折算进来。连续交付有奖励。营业结束可重新开始。
+默认标准店第一单为原味；完成 2 单解锁椰果，5 单解锁双拼。各店的可用原料、菜单、解锁和客流在 `assets/game/config/ShopProfiles.ts` 配置，订单只从已解锁且材料齐全的菜单中生成。耐心从进店起算，初始 40 秒，每交付一单递减 0.8 秒（最低 26 秒）——原来「思考 2.5 秒 + 接单」的免费时间已折算进来。连续交付有奖励。营业结束可重新开始。
 
 ## 美术与分层
 
@@ -42,6 +47,8 @@
 - `assets/resources/spines/bin/`：垃圾桶的 Spine 动画（open、close、bounce）。
 
 `sprites/` 里的图是从原来的 2×2 图集按格子原样裁出来的，原图集已删除。素材由内置 image_gen 生成，提示词和来源保存在 `ART-PROMPTS.json`、`ART-PROMPTS-V2.json`、`ART-PROMPTS-V3.json`（里面提到的图集文件名是裁切前的）。没有采用的带背景试稿未接入项目。卡片底、进度条、拖放提示框用 `RoundRect` 组件绘制，不需要图片；「先加小料后加奶」的临时配料叠加仍由代码绘制。
+
+`ShopThemes.ts` 当前提供原色、暖色、青玉三种染色主题，作用于现有背景、柜台和顾客提示色。本次拆分保留美术与 Spine 的原路径，没有新增整套装修美术。
 
 ## 发布为 web-mobile（横屏）
 
@@ -89,15 +96,19 @@ curl -o /dev/null -w '%{http_code}\n' https://v012345.github.io/cocos-js/_virtua
 
 ## 验证
 
-本轮 **22 项规则测试、17 项框架测试通过，项目类型检查通过**。整个流程在 Creator 浏览器预览里用鼠标走过一遍（取杯、加料、拖去封盖、交付、交错、丢弃、暂停、切后台、竖屏提示、结算、再开一局），其中拖动是用脚本模拟的鼠标事件，**没有在真机上用手指验收**。
+模块化改造已通过 **22 项规则测试、17 项框架测试、10 项店铺配置测试、7 项 Prefab 检查，以及 TypeScript 类型检查**。拆分后的 Creator 浏览器预览已验证三套布局、四客位同时显示、取杯、加料、拖放封盖、交付第四位顾客、垃圾桶丢弃、封盖暂停、结算与重开，以及返回菜单后保留店铺选择。操作使用脚本模拟鼠标，**没有在真机上用手指验收**。
+
+另验证了杯子根节点非等比缩放并旋转后的松手位置连续性，以及交付特效保留世界缩放。独立 `Sealer.prefab` 已在 Creator 编辑器中打开并确认组件绑定完整。
 
 ```sh
 node tests/game.test.mjs        # 奶茶规则
 node tests/framework.test.mjs   # 框架里不依赖引擎的部分（事件总线、状态机、动画驱动、落点判定）
+node tests/shop-config.test.mjs # 店铺容量、可制作菜单、解锁、客流、配置校验
+node tests/shop-prefabs.test.mjs # Prefab 本地引用、资源 UUID、物件归属和共享实例
 npx -p typescript@5.9 tsc --noEmit --skipLibCheck -p .
 ```
 
-两个测试直接运行 TypeScript 源码，需要 Node 22.18 以上，不需要安装 tsc；运行时 Node 会打印一条 `MODULE_TYPELESS_PACKAGE_JSON` 警告，可以忽略。类型检查要用 TypeScript 5.x，TypeScript 7 不再支持 Creator 生成的配置里的 `moduleResolution` 选项。`skipLibCheck` 跳过 Creator 引擎声明文件内部错误，仍检查项目脚本。
+规则、框架和店铺配置测试直接运行 TypeScript 源码，需要 Node 22.18 以上，不需要安装 tsc；运行时 Node 会打印一条 `MODULE_TYPELESS_PACKAGE_JSON` 警告，可以忽略。Prefab 测试检查资源文件，不启动引擎。类型检查要用 TypeScript 5.x，TypeScript 7 不再支持 Creator 生成的配置里的 `moduleResolution` 选项。`skipLibCheck` 跳过 Creator 引擎声明文件内部错误，仍检查项目脚本。
 
 请重点测试：手机上是否容易抓住杯子、从机器取成品是否顺手、拖到客人和垃圾桶是否准确、取消拖动或切后台后是否正确回位。封盖计时、资源显示、坐标换算和触控事件的实际表现仍需 Creator / 真机预览确认。
 
@@ -112,10 +123,11 @@ npx -p typescript@5.9 tsc --noEmit --skipLibCheck -p .
   - `fx/`：动画驱动 `Animator`。`platform/`：横竖屏监视。
 - `assets/game/`：奶茶游戏本体。
   - `logic/TeaGame.ts`：纯规则——顾客点单与耐心、单杯占位、封盖、交付和丢弃。不依赖引擎，通过事件通知画面。
-  - `flow/GameFlow.ts`：流程状态（主菜单、营业中、结算）。
-  - `view/`：制作台上的东西——`ShopView`（规则和画面之间的桥）、顾客、杯子、垃圾桶、配料。
-  - `ui/`：界面组件，只负责填数据和绑按钮。`config/`：顾客名字等内容。
-- `assets/resources/prefabs/`：所有画面的布局。
+  - `flow/GameFlow.ts`：流程状态（主菜单、营业中、结算），保持店铺选择并等待布局就绪后开始计时。
+  - `view/ShopView.ts`：规则和画面之间的桥；`view/shop/ShopLayout.ts` 收集布局物件并应用经营配置和主题。
+  - `view/shop/`：按 `equipment`、`ingredients`、`drinks`、`customers` 分类的物件组件。
+  - `ui/`：界面组件，只负责填数据和绑按钮。`config/`：店铺组合、经营配置、主题、配方和顾客内容。
+- `assets/resources/prefabs/`：界面入口与画面资源。`shop/` 共 19 个 Prefab，包括 16 个物件/特效与 3 个布局；布局使用原生嵌套引用共享物件。
 - `tests/`：独立脚本测试，不启动 Cocos 游戏。
 
 当前未加入音效、存档、升级系统或逐帧表情。

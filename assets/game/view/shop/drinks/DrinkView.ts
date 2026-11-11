@@ -1,5 +1,5 @@
 import { _decorator, Color, Component, Graphics, Node, Sprite, SpriteFrame } from 'cc';
-import type { Ingredient } from '../logic/TeaGame';
+import type { Ingredient } from '../../../logic/TeaGame';
 
 const { ccclass, property } = _decorator;
 

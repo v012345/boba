@@ -1,4 +1,5 @@
 import { _decorator, Component, Node, sp } from 'cc';
+import { DropZone } from '../../../../framework/input/DropZone';
 
 const { ccclass, property } = _decorator;
 
@@ -13,6 +14,8 @@ export class BinView extends Component {
     skeleton: sp.Skeleton = null!;
     @property({ type: Node, tooltip: '桶口的位置，丢弃的杯子会飞向这里' })
     mouth: Node = null!;
+    @property({ type: DropZone, tooltip: '随垃圾桶一起移动的放置区' })
+    dropZone: DropZone = null!;
     @property({ tooltip: '杯子掉进去的这段时间里保持开盖（秒）' })
     swallowTime = 0.25;
 

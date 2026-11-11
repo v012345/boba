@@ -1,6 +1,6 @@
 import { _decorator, Component, Node, Vec3 } from 'cc';
-import { easeOutCubic, easeOutQuad } from '../../framework/fx/Animator';
-import { Draggable } from '../../framework/input/Draggable';
+import { easeOutCubic, easeOutQuad } from '../../../../framework/fx/Animator';
+import { Draggable } from '../../../../framework/input/Draggable';
 import { DrinkView } from './DrinkView';
 
 const { ccclass, property } = _decorator;
@@ -60,7 +60,8 @@ export class CupView extends Component {
     /** 松手后调用：在 duration 秒内飞回停留位置，而不是瞬间跳回去。 */
     release(duration: number): void {
         // 把图案的上抬并入本节点，飞回过程中图案就不用再单独处理位移。
-        this.node.setPosition(this.node.position.x, this.node.position.y + this.art.position.y);
+        const releasedPosition = this.art.worldPosition.clone();
+        this.node.setWorldPosition(releasedPosition);
         this.art.setPosition(0, 0);
         if (duration <= 0) { this.snap(); return; }
         this.returning = { fromX: this.node.position.x, fromY: this.node.position.y, fromScale: this.art.scale.x, time: 0, duration };

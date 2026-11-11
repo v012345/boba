@@ -1,34 +1,32 @@
 import type { EventBus } from '../../framework/core/EventBus';
 import type { GameEvents } from '../GameEvents';
+import { INGREDIENT_NAMES, RECIPES } from '../config/Recipes';
+import type { Ingredient } from '../config/Recipes';
+import { SHOP_PROFILES, validateShopProfile } from '../config/ShopProfiles';
+import type { ShopProfile } from '../config/ShopProfiles';
+
+// 保留旧导入路径，视图可以逐步改用 config/Recipes。
+export { INGREDIENT_NAMES, RECIPES } from '../config/Recipes';
+export type { Ingredient, Recipe, RecipeId } from '../config/Recipes';
 
 /** Engine-independent game rules. All durations are in seconds. */
-export type Ingredient = 'tea' | 'milk' | 'pearl' | 'jelly';
 export type CupSize = 'S' | 'M' | 'L';
 // One shared supply today. Later each entry can own its stack art and price rules.
 export const CUP_SUPPLIES: { size: CupSize; label: string }[] = [
     { size: 'M', label: '空杯' },
 ];
-export interface Recipe { name: string; ingredients: Ingredient[]; price: number; color: string }
-export const INGREDIENT_NAMES: Record<Ingredient, string> = {
-    tea: '红茶', milk: '鲜奶', pearl: '珍珠', jelly: '椰果',
-};
-export const RECIPES: Recipe[] = [
-    { name: '原味奶茶', ingredients: ['tea', 'milk'], price: 18, color: '#CB9569' },
-    { name: '珍珠奶茶', ingredients: ['tea', 'milk', 'pearl'], price: 24, color: '#BD875B' },
-    { name: '椰果奶茶', ingredients: ['tea', 'milk', 'jelly'], price: 24, color: '#DEB68A' },
-    { name: '双拼奶茶', ingredients: ['tea', 'milk', 'pearl', 'jelly'], price: 30, color: '#C89C70' },
-];
 export interface Customer { id: number; recipe: number; patience: number; maxPatience: number }
 export interface Cup { ingredients: Ingredient[]; state: 'stored' | 'placing' | 'empty' | 'making' | 'sealing' | 'ready'; remaining: number; size?: CupSize }
 export class TeaGame {
-    readonly duration = 90;
-    readonly target = 150;
-    readonly sealDuration = 1;
+    readonly profile: ShopProfile;
+    readonly duration: number;
+    readonly target: number;
+    readonly sealDuration: number;
     /** How long an empty cup takes to slide from the stack onto the counter. */
-    readonly placeDuration = 0.45;
-    readonly departureDuration = 1;
-    private departureRemaining = [0, 0, 0];
-    time = this.duration;
+    readonly placeDuration: number;
+    readonly departureDuration: number;
+    private departureRemaining: number[];
+    time: number;
     money = 0;
     served = 0;
     lost = 0;
@@ -37,11 +35,11 @@ export class TeaGame {
     selected = 0;
     paused = false;
     ended = false;
-    customers: (Customer | null)[] = [null, null, null];
+    customers: (Customer | null)[];
     cups: Cup[] = [this.emptyCup()];
     message = '客人已经点单，直接取杯制作。先点击桌下杯子，把空杯放上桌。';
     private nextId = 1;
-    private spawnIn = 4;
+    private spawnIn: number;
     private random: () => number;
     private events: EventBus<GameEvents> | undefined;
     /**
@@ -49,7 +47,23 @@ export class TeaGame {
      * sealing and closing time. The first customer arrives inside the constructor, so a view
      * created afterwards has to read `customers` once instead of waiting for that event.
      */
-    constructor(random: () => number = Math.random, events?: EventBus<GameEvents>) {
+    constructor(random: () => number = Math.random, events?: EventBus<GameEvents>, profile: ShopProfile = SHOP_PROFILES.standard) {
+        validateShopProfile(profile);
+        // 独立快照，避免编辑共享配置时改变已开始的一局。
+        this.profile = Object.freeze({
+            ...profile,
+            ingredients: Object.freeze([...profile.ingredients]),
+            recipes: Object.freeze(profile.recipes.map(entry => Object.freeze({ ...entry }))),
+        });
+        this.duration = profile.duration;
+        this.target = profile.target;
+        this.sealDuration = profile.sealDuration;
+        this.placeDuration = profile.placeDuration;
+        this.departureDuration = profile.departureDuration;
+        this.time = this.duration;
+        this.customers = Array.from({ length: profile.customerSlots }, () => null);
+        this.departureRemaining = Array.from({ length: profile.customerSlots }, () => 0);
+        this.spawnIn = profile.spawnInitialDelay;
         this.random = random;
         this.events = events;
         this.spawn(0);
@@ -58,8 +72,9 @@ export class TeaGame {
     // Customers order the moment they walk in: the bubble shows the recipe and the
     // patience bar starts ticking right away, so there is no accept step.
     private spawn(slot: number) {
-        const unlocked = this.served < 2 ? 2 : this.served < 5 ? 3 : 4;
-        const recipe = this.nextId === 1 ? 0 : Math.floor(this.random() * unlocked);
+        const unlocked = this.profile.recipes.filter(entry => this.served >= entry.afterServed);
+        const entry = this.nextId === 1 ? unlocked[0] : unlocked[Math.floor(this.random() * unlocked.length)];
+        const recipe = RECIPES.findIndex(item => item.id === entry.recipeId);
         const maxPatience = Math.max(26, 40 - this.served * 0.8);
         this.customers[slot] = { id: this.nextId++, recipe, patience: maxPatience, maxPatience };
         this.events?.emit('customer:arrived', { slot });
@@ -94,6 +109,7 @@ export class TeaGame {
     /** Returns whether the ingredient went into the cup. */
     add(ingredient: Ingredient): boolean {
         if (!this.active) return false;
+        if (this.profile.ingredients.indexOf(ingredient) < 0) { this.message = '这家店没有提供这种原料。'; return false; }
         const cup = this.cups[this.selected];
         if (cup.state === 'stored' || cup.state === 'placing') { this.message = '请先点击桌下杯子，等它放到桌面上。'; return false; }
         if (cup.state === 'sealing' || cup.state === 'ready') { this.message = '杯子已进入封盖流程，完成后拖给客人或丢进垃圾桶。'; return false; }
@@ -111,7 +127,7 @@ export class TeaGame {
         if (cup.state !== 'making') { this.message = '请选择一杯制作中的奶茶。'; return false; }
         if (cup.ingredients.indexOf('milk') < 0) { this.message = '奶茶还缺鲜奶哦。'; return false; }
         cup.state = 'sealing'; cup.remaining = this.sealDuration;
-        this.message = '机器正在封盖，1 秒后拖给对应客人即可。';
+        this.message = `机器正在封盖，${this.sealDuration} 秒后拖给对应客人即可。`;
         return true;
     }
     /** Returns whether the cup was thrown away. */
@@ -176,7 +192,10 @@ export class TeaGame {
         this.spawnIn -= dt;
         if (this.spawnIn <= 0 && this.time > 5) {
             const slot = this.customers.findIndex((c, index) => !c && this.departureRemaining[index] === 0);
-            if (slot >= 0) { this.spawn(slot); this.spawnIn = Math.max(3, 6 - this.served * 0.15); }
+            if (slot >= 0) {
+                this.spawn(slot);
+                this.spawnIn = Math.max(this.profile.spawnMinInterval, this.profile.spawnInterval - this.served * this.profile.spawnAcceleration);
+            }
             else this.spawnIn = 0;
         }
         if (this.time === 0) {

@@ -1,9 +1,9 @@
 import { _decorator, Color, Component, Label, Node, Sprite, SpriteFrame, UIOpacity, UITransform, Vec3 } from 'cc';
-import { DropZone } from '../../framework/input/DropZone';
-import { FillBar } from '../../framework/ui/FillBar';
-import { CUSTOMER_NAMES } from '../config/Customers';
-import { INGREDIENT_NAMES, RECIPES, TeaGame } from '../logic/TeaGame';
-import { DrinkView } from './DrinkView';
+import { DropZone } from '../../../../framework/input/DropZone';
+import { FillBar } from '../../../../framework/ui/FillBar';
+import { CUSTOMER_NAMES } from '../../../config/Customers';
+import { INGREDIENT_NAMES, RECIPES, TeaGame } from '../../../logic/TeaGame';
+import { DrinkView } from '../drinks/DrinkView';
 
 const { ccclass, property } = _decorator;
 
@@ -64,7 +64,10 @@ export class CustomerView extends Component {
 
     /** 站位中心往上 offsetY 处的世界坐标，不含进出场的位移。 */
     worldPoint(offsetY = 0): Vec3 {
-        const local = new Vec3(this.home.x, this.home.y + offsetY, 0);
+        // 布局可以缩放或旋转整个顾客；偏移随物件变换，进出场位移仍不计入。
+        const radians = this.node.angle * Math.PI / 180;
+        const height = offsetY * this.node.scale.y;
+        const local = new Vec3(this.home.x - Math.sin(radians) * height, this.home.y + Math.cos(radians) * height, this.home.z);
         return this.node.parent!.getComponent(UITransform)!.convertToWorldSpaceAR(local);
     }
 
