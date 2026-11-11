@@ -209,7 +209,7 @@
       "a": 255
     },
     "_spriteFrame": {
-      "__uuid__": "95d2cdc2-d1bc-4478-a67e-c11458baa9e5@f9941",
+      "__uuid__": "0960af54-2c47-4cb8-9c4a-53ef61df58af@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
     "_type": 0,
@@ -407,7 +407,7 @@
     "_string": "巷口奶茶铺",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 56,
+    "_actualFontSize": 84,
     "_fontSize": 56,
     "_fontFamily": "Arial",
     "_lineHeight": 73,
@@ -421,6 +421,29 @@
     "_isUnderline": false,
     "_underlineHeight": 2,
     "_cacheMode": 0,
+    "_enableOutline": false,
+    "_outlineColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_outlineWidth": 2,
+    "_enableShadow": false,
+    "_shadowColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_shadowOffset": {
+      "__type__": "cc.Vec2",
+      "x": 2,
+      "y": 2
+    },
+    "_shadowBlur": 2,
     "_id": ""
   },
   {
@@ -603,7 +626,7 @@
     "_string": "开始营业",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 28,
+    "_actualFontSize": 42,
     "_fontSize": 28,
     "_fontFamily": "Arial",
     "_lineHeight": 36,
@@ -617,6 +640,29 @@
     "_isUnderline": false,
     "_underlineHeight": 2,
     "_cacheMode": 0,
+    "_enableOutline": false,
+    "_outlineColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_outlineWidth": 2,
+    "_enableShadow": false,
+    "_shadowColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_shadowOffset": {
+      "__type__": "cc.Vec2",
+      "x": 2,
+      "y": 2
+    },
+    "_shadowBlur": 2,
     "_id": ""
   },
   {
@@ -698,9 +744,9 @@
     "_lineCap": 0,
     "_fillColor": {
       "__type__": "cc.Color",
-      "r": 255,
-      "g": 255,
-      "b": 255,
+      "r": 82,
+      "g": 123,
+      "b": 98,
       "a": 255
     },
     "_miterLimit": 10,
@@ -730,6 +776,14 @@
       "a": 255
     },
     "_radius": 18,
+    "_strokeColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_strokeWidth": 0,
     "_id": ""
   },
   {
@@ -870,9 +924,9 @@
     "_fillColor": {
       "__type__": "cc.Color",
       "r": 255,
-      "g": 255,
-      "b": 255,
-      "a": 255
+      "g": 248,
+      "b": 232,
+      "a": 242
     },
     "_miterLimit": 10,
     "_id": ""
@@ -901,6 +955,14 @@
       "a": 242
     },
     "_radius": 26,
+    "_strokeColor": {
+      "__type__": "cc.Color",
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 255
+    },
+    "_strokeWidth": 0,
     "_id": ""
   },
   {
@@ -1015,7 +1077,6 @@
     },
     "fileId": "68fvYZ2htAkbf4krq8K/zr",
     "instance": null,
-    "targetOverrides": null,
-    "nestedPrefabInstanceRoots": null
+    "targetOverrides": null
   }
 ]
