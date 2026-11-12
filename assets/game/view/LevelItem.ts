@@ -1,4 +1,4 @@
-import { _decorator, Component, EventTouch, Label, Node, sp, Sprite, SpriteFrame, Vec2 } from 'cc';
+import { _decorator, Component, EventTouch, Label, Node, sp, Sprite, SpriteFrame, tween, Tween, Vec2, Vec3 } from 'cc';
 import { app } from '../GameApp';
 import type { LevelConfig } from '../config/Levels';
 
@@ -19,9 +19,14 @@ export class LevelItem extends Component {
     private touchId: number | null = null;
     private touchStart = new Vec2();
     private touchMoved = false;
+    private originalScale = new Vec3(1, 1, 1);
     onSelect: ((id: string) => void) | null = null;
     @property(sp.Skeleton)
     private skeleton: sp.Skeleton
+
+    onLoad(): void {
+        this.originalScale.set(this.node.scale);
+    }
 
     onEnable(): void {
         this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
@@ -36,6 +41,7 @@ export class LevelItem extends Component {
         this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
         this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchCancel, this);
         this.touchId = null;
+        this.resetPressFeedback();
     }
 
     async setData(config: LevelConfig): Promise<void> {
@@ -81,6 +87,7 @@ export class LevelItem extends Component {
         this.touchId = null;
         this.levelId = null;
         this.onSelect = null;
+        this.resetPressFeedback();
         this.resetVisual();
     }
 
@@ -100,6 +107,7 @@ export class LevelItem extends Component {
         this.touchId = event.getID();
         this.touchStart.set(event.getUILocation());
         this.touchMoved = false;
+        this.playPressFeedback();
     }
 
     private onTouchMove(event: EventTouch): void {
@@ -111,11 +119,34 @@ export class LevelItem extends Component {
         if (event.getID() !== this.touchId) return;
         const isTap = !this.touchMoved && Vec2.distance(this.touchStart, event.getUILocation()) <= 10;
         this.touchId = null;
-        if (isTap && this.levelId) this.onSelect?.(this.levelId);
+        this.restorePressFeedback();
+        if (isTap && this.levelId) {
+            this.onSelect?.(this.levelId);
+        }
     }
 
     private onTouchCancel(event: EventTouch): void {
-        if (event.getID() === this.touchId) this.touchId = null;
+        if (event.getID() !== this.touchId) return;
+        this.touchId = null;
+        this.restorePressFeedback();
+    }
+
+    private playPressFeedback(): void {
+        Tween.stopAllByTarget(this.node);
+        const scale = this.originalScale;
+        tween(this.node)
+            .to(0.07, { scale: new Vec3(scale.x * 0.9, scale.y * 0.9, scale.z) })
+            .start();
+    }
+
+    private restorePressFeedback(): void {
+        Tween.stopAllByTarget(this.node);
+        tween(this.node).to(0.1, { scale: this.originalScale.clone() }).start();
+    }
+
+    private resetPressFeedback(): void {
+        Tween.stopAllByTarget(this.node);
+        this.node.setScale(this.originalScale);
     }
 
     private resetVisual(): void {
