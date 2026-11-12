@@ -10,7 +10,7 @@ const MAP_FILES = ['map_01', 'map_02', 'map_03', 'map_04'];
 
 @ccclass('LevelSelectView')
 export class LevelSelectView extends UIPanel {
-    static prefab = 'prefabs/view/LevelSelect';
+    static prefab = 'prefabs/view/LevelSelectView';
 
     @property(Node)
     content: Node = null!;
@@ -35,6 +35,7 @@ export class LevelSelectView extends UIPanel {
     private mapHeight = 0;
     private mapCount = 0;
     private loadVersion = 0;
+    private selectedLevelId: string | null = null;
 
     onOpen(): void {
         this.contentTransform = this.content.getComponent(UITransform)!;
@@ -125,8 +126,19 @@ export class LevelSelectView extends UIPanel {
             node.setPosition(cfg.X + this.coordinateOffsetX, cfg.Y, 0);
             node.active = true;
             this.visible.set(cfg.Id, node);
-            void node.getComponent(LevelItem)!.setData(cfg);
+            const item = node.getComponent(LevelItem)!;
+            item.onSelect = this.selectLevel.bind(this);
+            item.setSelected(cfg.Id === this.selectedLevelId);
+            void item.setData(cfg);
         }
+    }
+
+    private selectLevel(id: string): void {
+        this.selectedLevelId = id;
+        for (const [visibleId, node] of this.visible) {
+            node.getComponent(LevelItem)!.setSelected(visibleId === id);
+        }
+        console.log('选中关卡：', id);
     }
 
     /** 首尾固定，中段交替使用 02、03；只保留视口附近的地图节点。 */
@@ -168,6 +180,7 @@ export class LevelSelectView extends UIPanel {
         this.mapVisible.clear();
         this.mapPool.length = 0;
         this.mapFrames = [];
+        this.selectedLevelId = null;
         this.contentTransform = null!;
         this.viewTransform = null!;
     }

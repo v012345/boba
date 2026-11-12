@@ -1,4 +1,4 @@
-import { _decorator, Component, Label, Node, Skeleton, sp, Sprite, SpriteFrame, UITransform } from 'cc';
+import { _decorator, Component, EventTouch, Label, Node, sp, Sprite, SpriteFrame, Vec2 } from 'cc';
 import { app } from '../GameApp';
 import type { LevelConfig } from '../config/Levels';
 
@@ -14,13 +14,35 @@ export class LevelItem extends Component {
 
     // 每次重新绑定时递增，避免异步加载完成后显示旧关卡的图片。
     private loadVersion = 0;
+    private levelId: string | null = null;
+    private selected = false;
+    private touchId: number | null = null;
+    private touchStart = new Vec2();
+    private touchMoved = false;
+    onSelect: ((id: string) => void) | null = null;
     @property(sp.Skeleton)
     private skeleton: sp.Skeleton
+
+    onEnable(): void {
+        this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
+        this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchCancel, this);
+    }
+
+    onDisable(): void {
+        this.node.off(Node.EventType.TOUCH_START, this.onTouchStart, this);
+        this.node.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchCancel, this);
+        this.touchId = null;
+    }
 
     async setData(config: LevelConfig): Promise<void> {
         const version = ++this.loadVersion;
 
-        this.levelLabel.string = config.Id.replace('level_', '关卡 ');
+        this.levelId = config.Id;
+        this.updateLabel();
         this.resetVisual();
 
         try {
@@ -56,7 +78,44 @@ export class LevelItem extends Component {
     /** 回收时取消旧加载结果，避免节点闲置时继续显示旧关卡。 */
     clear(): void {
         this.loadVersion++;
+        this.touchId = null;
+        this.levelId = null;
+        this.onSelect = null;
         this.resetVisual();
+    }
+
+    setSelected(selected: boolean): void {
+        this.selected = selected;
+        this.updateLabel();
+    }
+
+    private updateLabel(): void {
+        if (!this.levelId) return;
+        const text = this.levelId.replace('level_', '关卡 ');
+        this.levelLabel.string = this.selected ? `▶ ${text} ◀` : text;
+    }
+
+    private onTouchStart(event: EventTouch): void {
+        if (this.touchId !== null || !this.levelId) return;
+        this.touchId = event.getID();
+        this.touchStart.set(event.getUILocation());
+        this.touchMoved = false;
+    }
+
+    private onTouchMove(event: EventTouch): void {
+        if (event.getID() !== this.touchId) return;
+        if (Vec2.distance(this.touchStart, event.getUILocation()) > 10) this.touchMoved = true;
+    }
+
+    private onTouchEnd(event: EventTouch): void {
+        if (event.getID() !== this.touchId) return;
+        const isTap = !this.touchMoved && Vec2.distance(this.touchStart, event.getUILocation()) <= 10;
+        this.touchId = null;
+        if (isTap && this.levelId) this.onSelect?.(this.levelId);
+    }
+
+    private onTouchCancel(event: EventTouch): void {
+        if (event.getID() === this.touchId) this.touchId = null;
     }
 
     private resetVisual(): void {
