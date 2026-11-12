@@ -33,6 +33,9 @@ export class LevelSelectView extends UIPanel {
             throw new Error('选关页面缺少 Content、视口 UITransform 或 LevelItem 组件');
         }
         this.resizeContent();
+        // ScrollView 通过移动 Content 实现滚动，包括惯性、回弹和代码滚动。
+        this.content.on(Node.EventType.TRANSFORM_CHANGED, this.refreshVisible, this);
+        this.viewTransform.node.on(Node.EventType.SIZE_CHANGED, this.refreshVisible, this);
         this.refreshVisible();
     }
 
@@ -52,10 +55,6 @@ export class LevelSelectView extends UIPanel {
         content.setContentSize(width, content.contentSize.height);
         const scroll = this.viewTransform.node.parent?.getComponent(ScrollView);
         scroll?.scrollToLeft(0);
-    }
-
-    update(): void {
-        if (this.contentTransform && this.viewTransform) this.refreshVisible();
     }
 
     private refreshVisible(): void {
@@ -97,6 +96,8 @@ export class LevelSelectView extends UIPanel {
     }
 
     onClose(): void {
+        this.content.off(Node.EventType.TRANSFORM_CHANGED, this.refreshVisible, this);
+        this.viewTransform?.node.off(Node.EventType.SIZE_CHANGED, this.refreshVisible, this);
         for (const node of this.visible.values()) node.getComponent(LevelItem)?.clear();
         this.visible.clear();
         this.pool.length = 0;
