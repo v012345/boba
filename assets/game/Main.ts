@@ -4,6 +4,7 @@ import { Flow, registerFlow } from './flow/GameFlow';
 import { app } from './GameApp';
 import { RotateHintPanel } from './ui/RotateHintPanel';
 import { DEFAULT_SHOP_ID } from './config/Shops';
+import { LevelSelectView } from './view/LevelSelectView';
 
 const { ccclass, property } = _decorator;
 
@@ -22,7 +23,9 @@ export class Main extends Component {
         // 界面按 1280×720 设计。整屏等比缩放、不裁切，比例不同的屏幕会在两侧或上下留边。
         view.setDesignResolutionSize(1280, 720, ResolutionPolicy.SHOW_ALL);
         app.ui.init(this.node);
-        app.flow.change(Flow.Menu, { shopId: this.shopId });
+        // app.flow.change(Flow.Menu, { shopId: this.shopId });
+        // 开发期间直接打开选关页面。
+        app.ui.open<any>(LevelSelectView);
         this.orientation = new OrientationWatcher(portrait => this.onOrientationChange(portrait));
         this.orientation.start();
     }
