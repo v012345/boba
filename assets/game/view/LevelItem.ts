@@ -38,6 +38,12 @@ export class LevelItem extends Component {
         }
     }
 
+    /** 回收时取消旧加载结果，避免节点闲置时继续显示旧关卡。 */
+    clear(): void {
+        this.loadVersion++;
+        this.icon.spriteFrame = null;
+    }
+
     onDestroy(): void {
         this.loadVersion++;
     }
