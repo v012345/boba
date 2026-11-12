@@ -6,16 +6,20 @@ export interface LevelConfig {
     /** 相对于选关页面 Content 节点的坐标。 */
     readonly X: number;
     readonly Y: number;
+    /** Spine 动画名和缩放可按角色覆盖；未填时自动选择动画并使用原始缩放。 */
+    readonly Animation?: string;
+    readonly SpineScale?: number;
 }
 
 // 图片路径指向 SpriteFrame 子资源；Spine 路径指向 SkeletonData 资源。
-// 例如：['spines/characters/mog', true]。
+// Spine 示例：['spines/characters/mog', true, 440, 0, 'idle', 0.2]。
 // 按此处的顺序展示关卡。坐标暂为占位值，可根据实际地图逐关调整。
 // ID 和资源路径互相独立，允许多个关卡复用同一资源。
-const config: Readonly<Record<string, readonly [filePath: string, isSpine: boolean, x: number, y: number]>> = {
+const config: Readonly<Record<string, readonly [filePath: string, isSpine: boolean, x: number, y: number, animation?: string, spineScale?: number]>> = {
     level_001: ['images/level-select/level_001/spriteFrame', false, 0, 0],
     level_002: ['images/level-select/level_002/spriteFrame', false, 220, 100],
-    level_003: ['images/level-select/level_003/spriteFrame', false, 440, 0],
+    // 先用第三关验证 Spine；缩放可根据素材实际大小调整。
+    level_003: ['spines/characters/wuy', true, 440, 0, undefined, 1],
     level_004: ['images/level-select/level_004/spriteFrame', false, 660, 100],
     level_005: ['images/level-select/level_005/spriteFrame', false, 880, 0],
     level_006: ['images/level-select/level_006/spriteFrame', false, 1100, 100],
@@ -317,8 +321,8 @@ const config: Readonly<Record<string, readonly [filePath: string, isSpine: boole
 
 // 配置只在模块初始化时转换一次；冻结缓存，防止外部修改影响后续读取。
 const configs: readonly LevelConfig[] = Object.freeze(Object.keys(config).map(Id => {
-    const [FilePath, IsSpine, X, Y] = config[Id];
-    return Object.freeze({ Id, FilePath, IsSpine, X, Y });
+    const [FilePath, IsSpine, X, Y, Animation, SpineScale] = config[Id];
+    return Object.freeze({ Id, FilePath, IsSpine, X, Y, Animation, SpineScale });
 }));
 const configsById = new Map(configs.map(cfg => [cfg.Id, cfg]));
 
