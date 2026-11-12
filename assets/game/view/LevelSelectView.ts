@@ -3,6 +3,7 @@ import { UIPanel } from '../../framework/ui/UIPanel';
 import { app } from '../GameApp';
 import { Levels } from '../config/Levels';
 import { LevelItem } from './LevelItem';
+import { LevelView } from './LevelView';
 
 const { ccclass, property } = _decorator;
 const MAP_RESOURCE_DIR = 'images/level-select/maps/continuous/modular-curved';
@@ -36,6 +37,7 @@ export class LevelSelectView extends UIPanel {
     private mapCount = 0;
     private loadVersion = 0;
     private selectedLevelId: string | null = null;
+    private openingLevel = false;
 
     onOpen(): void {
         this.contentTransform = this.content.getComponent(UITransform)!;
@@ -134,11 +136,21 @@ export class LevelSelectView extends UIPanel {
     }
 
     private selectLevel(id: string): void {
+        if (this.openingLevel) return;
+        const level = Levels.getCfg(id);
+        if (!level) {
+            console.error(`找不到关卡配置：${id}`);
+            return;
+        }
         this.selectedLevelId = id;
         for (const [visibleId, node] of this.visible) {
             node.getComponent(LevelItem)!.setSelected(visibleId === id);
         }
-        console.log('选中关卡：', id);
+        this.openingLevel = true;
+        void app.ui.open(LevelView, {
+            level,
+            onBack: () => { void app.ui.open<void>(LevelSelectView); },
+        }).then(() => { this.openingLevel = false; }, () => { this.openingLevel = false; });
     }
 
     /** 首尾固定，中段交替使用 02、03；只保留视口附近的地图节点。 */
