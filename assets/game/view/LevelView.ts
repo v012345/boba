@@ -1,20 +1,24 @@
-import { _decorator, Color, Label, Node, UITransform } from 'cc';
+import { _decorator, Color, instantiate, Label, Node, Prefab, UITransform } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
-import type { LevelConfig } from '../config/Levels';
+import { app } from '../GameApp';
+import { LevelMaterials } from '../config/LevelMaterials';
+import { Materials } from '../config/Materials';
 
 const { ccclass } = _decorator;
 
 export interface LevelParams {
-    level: LevelConfig;
+    levelId: string;
     /** 通关后传 true；直接返回或失败时不传参数。 */
     onBack: (completed?: boolean) => void;
 }
 
-/** 所有关卡共用的页面入口；后续可根据 level.Id 加载各关的内容配置。 */
+/** 根据关卡 ID 加载材料配置并创建关卡。 */
 @ccclass('LevelView')
 export class LevelView extends UIPanel<LevelParams> {
     static prefab = 'prefabs/view/LevelView';
+
+    private loadVersion = 0;
 
     onOpen(params: LevelParams): void {
         // 临时展示关卡 ID 和返回入口，方便验证页面切换和参数传递。
@@ -26,12 +30,13 @@ export class LevelView extends UIPanel<LevelParams> {
 
         const titleNode = new Node('LevelTitle');
         titleNode.layer = this.node.layer;
+        titleNode.setPosition(0, 290);
         this.node.addChild(titleNode);
         titleNode.addComponent(UITransform).setContentSize(600, 80);
         const title = titleNode.addComponent(Label);
         title.fontSize = 36;
         title.lineHeight = 44;
-        title.string = `关卡 ${params.level.Id}`;
+        title.string = `关卡 ${params.levelId}`;
 
         const back = new Node('Back');
         back.layer = this.node.layer;
@@ -48,5 +53,34 @@ export class LevelView extends UIPanel<LevelParams> {
         label.lineHeight = 30;
         label.string = '返回选关';
         back.on(Node.EventType.TOUCH_END, () => params.onBack());
+        void this.createMaterials(params.levelId, ++this.loadVersion);
+    }
+
+    private async createMaterials(levelId: string, version: number): Promise<void> {
+        const config = LevelMaterials.getCfg(levelId);
+        if (!config) {
+            console.warn(`没有找到关卡材料配置：${levelId}`);
+            return;
+        }
+        try {
+            const prefabs = await Promise.all(config.Materials.map(material => {
+                const materialConfig = Materials.getCfg(material.Id);
+                if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
+                return app.res.load(materialConfig.Prefab, Prefab);
+            }));
+            if (!this.isValid || version !== this.loadVersion) return;
+            config.Materials.forEach((material, index) => {
+                const node = instantiate(prefabs[index]);
+                node.name = material.Id;
+                node.setPosition(material.X, material.Y, 0);
+                this.node.addChild(node);
+            });
+        } catch (error) {
+            if (this.isValid && version === this.loadVersion) console.error(`加载关卡材料失败：${levelId}`, error);
+        }
+    }
+
+    onClose(): void {
+        this.loadVersion++;
     }
 }

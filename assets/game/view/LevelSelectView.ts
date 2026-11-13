@@ -173,7 +173,7 @@ export class LevelSelectView extends UIPanel<LevelSelectParams | void> {
         const scrollOffset = -(scroll?.getScrollOffset().x ?? 0);
         this.openingLevel = true;
         void app.ui.open(LevelView, {
-            level,
+            levelId: level.Id,
             onBack: (completed = false) => {
                 void app.ui.open(LevelSelectView, { scrollOffset, selectedLevelId: id, completed });
             },
