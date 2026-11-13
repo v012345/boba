@@ -1,8 +1,9 @@
-import { _decorator, Color, instantiate, Label, Node, Prefab, tween, Tween, UITransform, Vec2, Vec3 } from 'cc';
+import { _decorator, Color, instantiate, Label, Node, Prefab, Sprite, SpriteFrame, tween, Tween, UITransform, Vec2, Vec3 } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
 import { LevelContent } from '../config/LevelContent';
+import { LevelBackgrounds } from '../config/LevelBackgrounds';
 import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 import { Workbenches } from '../config/Workbenches';
@@ -67,16 +68,28 @@ export class LevelView extends UIPanel<LevelParams> {
         label.lineHeight = 30;
         label.string = '返回选关';
         back.on(Node.EventType.TOUCH_END, () => params.onBack());
-        void this.createLevelContent(params.levelId, ++this.loadVersion);
+        void this.createLevelContent(params.levelId, ++this.loadVersion, background);
     }
 
-    private async createLevelContent(levelId: string, version: number): Promise<void> {
+    private async createLevelContent(levelId: string, version: number, background: Node): Promise<void> {
         const config = LevelContent.getCfg(levelId);
         if (!config) {
             console.warn(`没有找到关卡内容配置：${levelId}`);
             return;
         }
         try {
+            const backgroundConfig = LevelBackgrounds.getCfg(config.Background);
+            if (!backgroundConfig) throw new Error(`找不到背景配置：${config.Background}`);
+            const backgroundFrame = await app.res.load(backgroundConfig.SpriteFrame, SpriteFrame);
+            if (!this.isValid || version !== this.loadVersion) return;
+            const backgroundImage = new Node('BackgroundImage');
+            backgroundImage.layer = background.layer;
+            background.addChild(backgroundImage);
+            backgroundImage.addComponent(UITransform).setContentSize(1280, 720);
+            const sprite = backgroundImage.addComponent(Sprite);
+            sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+            sprite.spriteFrame = backgroundFrame;
+
             const workbenchConfig = Workbenches.getCfg(config.Workbench.Id);
             if (!workbenchConfig) throw new Error(`找不到工作台配置：${config.Workbench.Id}`);
             const binConfig = Bins.getCfg(config.Bin.Id);
