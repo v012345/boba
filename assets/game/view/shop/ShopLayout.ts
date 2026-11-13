@@ -6,7 +6,8 @@ import { CupSupplyView } from './equipment/CupSupplyView';
 import { WorkstationView } from './equipment/WorkstationView';
 import { CupView } from './drinks/CupView';
 import { CustomerView } from './customers/CustomerView';
-import { IngredientTray } from './ingredients/IngredientTray';
+import { IngredientTray } from '../IngredientTray';
+
 
 const { ccclass, property } = _decorator;
 

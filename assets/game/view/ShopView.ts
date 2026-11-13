@@ -15,7 +15,8 @@ import { WorkstationView } from './shop/equipment/WorkstationView';
 import { CupView } from './shop/drinks/CupView';
 import { CustomerView } from './shop/customers/CustomerView';
 import { DrinkView } from './shop/drinks/DrinkView';
-import { IngredientTray } from './shop/ingredients/IngredientTray';
+import { IngredientTray } from './IngredientTray';
+
 
 const { ccclass } = _decorator;
 
