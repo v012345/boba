@@ -5,6 +5,7 @@ import { app } from '../GameApp';
 import { LevelContent } from '../config/LevelContent';
 import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
+import { Workbenches } from '../config/Workbenches';
 
 const { ccclass } = _decorator;
 
@@ -64,6 +65,9 @@ export class LevelView extends UIPanel<LevelParams> {
             return;
         }
         try {
+            const workbenchConfig = Workbenches.getCfg(config.Workbench.Id);
+            if (!workbenchConfig) throw new Error(`找不到工作台配置：${config.Workbench.Id}`);
+            const workbenchPrefab = app.res.load(workbenchConfig.Prefab, Prefab);
             const materialPrefabs = config.Materials.map(material => {
                 const materialConfig = Materials.getCfg(material.Id);
                 if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
@@ -74,8 +78,13 @@ export class LevelView extends UIPanel<LevelParams> {
                 if (!containerConfig) throw new Error(`找不到容器配置：${container.Id}`);
                 return app.res.load(containerConfig.Prefab, Prefab);
             });
-            const prefabs = await Promise.all([...materialPrefabs, ...containerPrefabs]);
+            const [workbench, ...prefabs] = await Promise.all([workbenchPrefab, ...materialPrefabs, ...containerPrefabs]);
             if (!this.isValid || version !== this.loadVersion) return;
+            const workbenchNode = instantiate(workbench);
+            workbenchNode.name = config.Workbench.Id;
+            workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
+            this.node.addChild(workbenchNode);
+            workbenchNode.setSiblingIndex(1); // 工作台位于背景之上、其他内容之下。
             config.Materials.forEach((material, index) => {
                 const node = instantiate(prefabs[index]);
                 node.name = material.Id;
