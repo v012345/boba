@@ -4,6 +4,7 @@ import type { WorkbenchId } from './Workbenches';
 import type { BinId } from './Bins';
 import type { HoldingAreaId } from './HoldingAreas';
 import type { LevelBackgroundId } from './LevelBackgrounds';
+import type { LevelCustomerId } from './LevelCustomers';
 
 export interface LevelMaterial {
     readonly Id: MaterialId;
@@ -37,6 +38,12 @@ export interface LevelHoldingArea {
     readonly Capacity: number;
 }
 
+export interface LevelCustomer {
+    readonly Id: LevelCustomerId;
+    readonly X: number;
+    readonly Y: number;
+}
+
 export interface LevelContentConfig {
     readonly Id: string;
     readonly Background: LevelBackgroundId;
@@ -45,9 +52,11 @@ export interface LevelContentConfig {
     readonly Workbench: LevelWorkbench;
     readonly Bin: LevelBin;
     readonly HoldingArea?: LevelHoldingArea;
+    /** 固定出现的顾客，每条配置对应一个站位。 */
+    readonly Customers: readonly LevelCustomer[];
 }
 
-/** 每关依次填写材料、容器、工作台、垃圾桶、背景 ID 和可选暂存区；暂存区格式为 [ID, X, Y, 容量]。坐标以页面中心为原点。 */
+/** 每关依次填写材料、容器、工作台、垃圾桶、背景 ID、可选暂存区和可选顾客列表；暂存区格式为 [ID, X, Y, 容量]。坐标以页面中心为原点。 */
 type Placement<Id extends string> = readonly [Id, number, number];
 const config: Readonly<Record<string, readonly [
     materials: readonly Placement<MaterialId>[],
@@ -56,12 +65,13 @@ const config: Readonly<Record<string, readonly [
     bin: Placement<BinId>,
     background: LevelBackgroundId,
     holdingArea?: readonly [HoldingAreaId, number, number, number],
+    customers?: readonly Placement<LevelCustomerId>[],
 ]>> = {
     level_001: [[
         ['tea', -490, -10],
         ['milk', -340, -10],
         ['pearl', -190, -10],
-    ], [['bowlStack', -450, -220], ['cupStack', -160, -220]], ['workbench', 75, -20], ['bin', 520, -220], 'underworldStall', ['holdingArea', 430, -20, 2]],
+    ], [['bowlStack', -450, -220], ['cupStack', -160, -220]], ['workbench', 75, -20], ['bin', 520, -220], 'underworldStall', ['holdingArea', 430, -20, 2], [['wanderingGhost', -215, 105], ['ghostBride', 215, 105]]],
     level_002: [[
         ['bone', -240, 0],
         ['organs', 0, 0],
@@ -94,6 +104,7 @@ const configs: readonly LevelContentConfig[] = Object.freeze(Object.keys(config)
         return Object.freeze({
             Id,
             Background: config[Id][4],
+            Customers: Object.freeze((config[Id][6] ?? []).map(([customerId, X, Y]) => Object.freeze({ Id: customerId, X, Y }))),
             Materials: Object.freeze(config[Id][0].map(([materialId, X, Y]) => Object.freeze({ Id: materialId, X, Y }))),
             Containers: Object.freeze(config[Id][1].map(([containerId, X, Y]) => Object.freeze({ Id: containerId, X, Y }))),
             Workbench: Object.freeze({ Id: config[Id][2][0], X: config[Id][2][1], Y: config[Id][2][2] }),

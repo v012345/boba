@@ -4,6 +4,7 @@ import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
 import { LevelContent } from '../config/LevelContent';
 import { LevelBackgrounds } from '../config/LevelBackgrounds';
+import { LevelCustomers } from '../config/LevelCustomers';
 import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 import { Workbenches } from '../config/Workbenches';
@@ -122,7 +123,15 @@ export class LevelView extends UIPanel<LevelParams> {
             const binConfig = Bins.getCfg(config.Bin.Id);
             if (!binConfig) throw new Error(`找不到垃圾桶配置：${config.Bin.Id}`);
             const prefabs = new Map<string, Prefab>();
+            const customerFrames = new Map<string, SpriteFrame>();
+            const customerFramePaths = new Set<string>();
             const paths = new Set<string>();
+            config.Customers.forEach(customer => {
+                const customerConfig = LevelCustomers.getCfg(customer.Id);
+                if (!customerConfig) throw new Error(`找不到顾客配置：${customer.Id}`);
+                paths.add(customerConfig.Prefab);
+                customerFramePaths.add(customerConfig.SpriteFrame);
+            });
             paths.add(workbenchConfig.Prefab);
             paths.add(binConfig.Prefab);
             const holdingAreaConfig = config.HoldingArea ? HoldingAreas.getCfg(config.HoldingArea.Id) : undefined;
@@ -140,15 +149,28 @@ export class LevelView extends UIPanel<LevelParams> {
                 paths.add(containerConfig.Prefab);
                 paths.add(containerConfig.ItemPrefab);
             });
-            await Promise.all(Array.from(paths, async path => {
-                prefabs.set(path, await app.res.load(path, Prefab));
-            }));
+            await Promise.all([
+                ...Array.from(paths, async path => { prefabs.set(path, await app.res.load(path, Prefab)); }),
+                ...Array.from(customerFramePaths, async path => { customerFrames.set(path, await app.res.load(path, SpriteFrame)); }),
+            ]);
             const getPrefab = (path: string): Prefab => {
                 const prefab = prefabs.get(path);
                 if (!prefab) throw new Error(`找不到已加载的 Prefab：${path}`);
                 return prefab;
             };
             if (!this.isValid || version !== this.loadVersion) return;
+            config.Customers.forEach(customer => {
+                const customerConfig = LevelCustomers.getCfg(customer.Id)!;
+                const frame = customerFrames.get(customerConfig.SpriteFrame);
+                if (!frame) throw new Error(`找不到顾客图片：${customer.Id}`);
+                const node = instantiate(getPrefab(customerConfig.Prefab));
+                const portrait = node.getComponentInChildren(Sprite);
+                if (!portrait) throw new Error(`顾客 Prefab 缺少 Sprite：${customer.Id}`);
+                portrait.spriteFrame = frame;
+                node.name = customer.Id;
+                node.setPosition(customer.X, customer.Y, 0);
+                this.customerLayer.addChild(node);
+            });
             const workbenchNode = instantiate(getPrefab(workbenchConfig.Prefab));
             workbenchNode.name = config.Workbench.Id;
             workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
