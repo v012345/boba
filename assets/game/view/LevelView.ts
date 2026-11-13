@@ -1,4 +1,4 @@
-import { _decorator, Color, instantiate, Label, Node, Prefab, Sprite, SpriteFrame, tween, Tween, UITransform, Vec2, Vec3 } from 'cc';
+import { _decorator, Color, instantiate, Label, Mask, Node, Prefab, Sprite, SpriteFrame, tween, Tween, UITransform, Vec2, Vec3 } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
@@ -28,6 +28,9 @@ export interface LevelParams {
 export class LevelView extends UIPanel<LevelParams> {
     static prefab = 'prefabs/view/LevelView';
 
+    /** 顾客在背景和柜台前景之间显示。 */
+    customerLayer: Node = null!;
+
     private loadVersion = 0;
     private activeContainer: Node | null = null;
     private flyingIngredients = new Set<Node>();
@@ -42,6 +45,15 @@ export class LevelView extends UIPanel<LevelParams> {
         this.node.addChild(background);
         background.addComponent(UITransform).setContentSize(1280, 720);
         background.addComponent(RoundRect).color = new Color(29, 25, 31, 255);
+
+        this.customerLayer = new Node('CustomerLayer');
+        this.customerLayer.layer = this.node.layer;
+        this.node.addChild(this.customerLayer);
+        this.customerLayer.addComponent(UITransform).setContentSize(1280, 720);
+
+        const foreground = new Node('CounterForeground');
+        foreground.layer = this.node.layer;
+        this.node.addChild(foreground);
 
         const titleNode = new Node('LevelTitle');
         titleNode.layer = this.node.layer;
@@ -68,10 +80,10 @@ export class LevelView extends UIPanel<LevelParams> {
         label.lineHeight = 30;
         label.string = '返回选关';
         back.on(Node.EventType.TOUCH_END, () => params.onBack());
-        void this.createLevelContent(params.levelId, ++this.loadVersion, background);
+        void this.createLevelContent(params.levelId, ++this.loadVersion, background, foreground);
     }
 
-    private async createLevelContent(levelId: string, version: number, background: Node): Promise<void> {
+    private async createLevelContent(levelId: string, version: number, background: Node, foreground: Node): Promise<void> {
         const config = LevelContent.getCfg(levelId);
         if (!config) {
             console.warn(`没有找到关卡内容配置：${levelId}`);
@@ -89,6 +101,21 @@ export class LevelView extends UIPanel<LevelParams> {
             const sprite = backgroundImage.addComponent(Sprite);
             sprite.sizeMode = Sprite.SizeMode.CUSTOM;
             sprite.spriteFrame = backgroundFrame;
+
+            // 同一张背景图按柜台顶部裁出前景，避免分图造成接缝；顾客层位于两者之间。
+            const foregroundHeight = backgroundConfig.ForegroundTopY + 360;
+            if (foregroundHeight <= 0 || foregroundHeight > 720) throw new Error('背景前景顶部坐标超出画面范围');
+            foreground.setPosition(0, (backgroundConfig.ForegroundTopY - 360) / 2);
+            foreground.addComponent(UITransform).setContentSize(1280, foregroundHeight);
+            foreground.addComponent(Mask).type = Mask.Type.GRAPHICS_RECT;
+            const foregroundImage = new Node('ForegroundImage');
+            foregroundImage.layer = foreground.layer;
+            foreground.addChild(foregroundImage);
+            foregroundImage.setPosition(0, -foreground.position.y);
+            foregroundImage.addComponent(UITransform).setContentSize(1280, 720);
+            const foregroundSprite = foregroundImage.addComponent(Sprite);
+            foregroundSprite.sizeMode = Sprite.SizeMode.CUSTOM;
+            foregroundSprite.spriteFrame = backgroundFrame;
 
             const workbenchConfig = Workbenches.getCfg(config.Workbench.Id);
             if (!workbenchConfig) throw new Error(`找不到工作台配置：${config.Workbench.Id}`);
@@ -126,7 +153,7 @@ export class LevelView extends UIPanel<LevelParams> {
             workbenchNode.name = config.Workbench.Id;
             workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
             this.node.addChild(workbenchNode);
-            workbenchNode.setSiblingIndex(1); // 工作台位于背景之上、其他内容之下。
+            workbenchNode.setSiblingIndex(3); // 工作台在柜台前景之上。
             let holdingArea: HoldingArea | null = null;
             if (config.HoldingArea && holdingAreaConfig) {
                 const area = instantiate(getPrefab(holdingAreaConfig.Prefab));
@@ -137,7 +164,7 @@ export class LevelView extends UIPanel<LevelParams> {
                 area.name = config.HoldingArea.Id;
                 area.setPosition(config.HoldingArea.X, config.HoldingArea.Y, 0);
                 this.node.addChild(area);
-                area.setSiblingIndex(2);
+                area.setSiblingIndex(4);
             }
             const binNode = instantiate(getPrefab(binConfig.Prefab));
             binNode.name = config.Bin.Id;
