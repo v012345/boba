@@ -2,7 +2,8 @@ import { _decorator, Color, instantiate, Label, Node, Prefab, UITransform } from
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
-import { LevelMaterials } from '../config/LevelMaterials';
+import { LevelContent } from '../config/LevelContent';
+import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 
 const { ccclass } = _decorator;
@@ -53,21 +54,27 @@ export class LevelView extends UIPanel<LevelParams> {
         label.lineHeight = 30;
         label.string = '返回选关';
         back.on(Node.EventType.TOUCH_END, () => params.onBack());
-        void this.createMaterials(params.levelId, ++this.loadVersion);
+        void this.createLevelContent(params.levelId, ++this.loadVersion);
     }
 
-    private async createMaterials(levelId: string, version: number): Promise<void> {
-        const config = LevelMaterials.getCfg(levelId);
+    private async createLevelContent(levelId: string, version: number): Promise<void> {
+        const config = LevelContent.getCfg(levelId);
         if (!config) {
-            console.warn(`没有找到关卡材料配置：${levelId}`);
+            console.warn(`没有找到关卡内容配置：${levelId}`);
             return;
         }
         try {
-            const prefabs = await Promise.all(config.Materials.map(material => {
+            const materialPrefabs = config.Materials.map(material => {
                 const materialConfig = Materials.getCfg(material.Id);
                 if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
                 return app.res.load(materialConfig.Prefab, Prefab);
-            }));
+            });
+            const containerPrefabs = config.Containers.map(container => {
+                const containerConfig = Containers.getCfg(container.Id);
+                if (!containerConfig) throw new Error(`找不到容器配置：${container.Id}`);
+                return app.res.load(containerConfig.Prefab, Prefab);
+            });
+            const prefabs = await Promise.all([...materialPrefabs, ...containerPrefabs]);
             if (!this.isValid || version !== this.loadVersion) return;
             config.Materials.forEach((material, index) => {
                 const node = instantiate(prefabs[index]);
@@ -75,8 +82,14 @@ export class LevelView extends UIPanel<LevelParams> {
                 node.setPosition(material.X, material.Y, 0);
                 this.node.addChild(node);
             });
+            config.Containers.forEach((container, index) => {
+                const node = instantiate(prefabs[config.Materials.length + index]);
+                node.name = container.Id;
+                node.setPosition(container.X, container.Y, 0);
+                this.node.addChild(node);
+            });
         } catch (error) {
-            if (this.isValid && version === this.loadVersion) console.error(`加载关卡材料失败：${levelId}`, error);
+            if (this.isValid && version === this.loadVersion) console.error(`加载关卡内容失败：${levelId}`, error);
         }
     }
 
