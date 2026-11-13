@@ -5,6 +5,7 @@ import type { BinId } from './Bins';
 import type { HoldingAreaId } from './HoldingAreas';
 import type { LevelBackgroundId } from './LevelBackgrounds';
 import type { LevelCustomerId } from './LevelCustomers';
+import type { LevelOrderId } from './LevelOrders';
 
 export interface LevelMaterial {
     readonly Id: MaterialId;
@@ -42,6 +43,7 @@ export interface LevelCustomer {
     readonly Id: LevelCustomerId;
     readonly X: number;
     readonly Y: number;
+    readonly OrderId: LevelOrderId;
 }
 
 export interface LevelContentConfig {
@@ -65,13 +67,13 @@ const config: Readonly<Record<string, readonly [
     bin: Placement<BinId>,
     background: LevelBackgroundId,
     holdingArea?: readonly [HoldingAreaId, number, number, number],
-    customers?: readonly Placement<LevelCustomerId>[],
+    customers?: readonly (readonly [LevelCustomerId, number, number, LevelOrderId])[],
 ]>> = {
     level_001: [[
         ['tea', -490, -10],
         ['milk', -340, -10],
         ['pearl', -190, -10],
-    ], [['bowlStack', -450, -220], ['cupStack', -160, -220]], ['workbench', 75, -20], ['bin', 520, -220], 'underworldStall', ['holdingArea', 430, -20, 2], [['wanderingGhost', -215, 105], ['ghostBride', 215, 105]]],
+    ], [['bowlStack', -450, -220], ['cupStack', -160, -220]], ['workbench', 75, -20], ['bin', 520, -220], 'underworldStall', ['holdingArea', 430, -20, 2], [['wanderingGhost', -215, 105, 'milkTea'], ['ghostBride', 215, 105, 'pearlMilkTea']]],
     level_002: [[
         ['bone', -240, 0],
         ['organs', 0, 0],
@@ -104,7 +106,7 @@ const configs: readonly LevelContentConfig[] = Object.freeze(Object.keys(config)
         return Object.freeze({
             Id,
             Background: config[Id][4],
-            Customers: Object.freeze((config[Id][6] ?? []).map(([customerId, X, Y]) => Object.freeze({ Id: customerId, X, Y }))),
+            Customers: Object.freeze((config[Id][6] ?? []).map(([customerId, X, Y, OrderId]) => Object.freeze({ Id: customerId, X, Y, OrderId }))),
             Materials: Object.freeze(config[Id][0].map(([materialId, X, Y]) => Object.freeze({ Id: materialId, X, Y }))),
             Containers: Object.freeze(config[Id][1].map(([containerId, X, Y]) => Object.freeze({ Id: containerId, X, Y }))),
             Workbench: Object.freeze({ Id: config[Id][2][0], X: config[Id][2][1], Y: config[Id][2][2] }),

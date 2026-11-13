@@ -5,6 +5,8 @@ import { app } from '../GameApp';
 import { LevelContent } from '../config/LevelContent';
 import { LevelBackgrounds } from '../config/LevelBackgrounds';
 import { LevelCustomers } from '../config/LevelCustomers';
+import { LevelOrders } from '../config/LevelOrders';
+import { Customer } from './level/customers/Customer';
 import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 import { Workbenches } from '../config/Workbenches';
@@ -167,6 +169,10 @@ export class LevelView extends UIPanel<LevelParams> {
                 const portrait = node.getComponentInChildren(Sprite);
                 if (!portrait) throw new Error(`顾客 Prefab 缺少 Sprite：${customer.Id}`);
                 portrait.spriteFrame = frame;
+                const customerComponent = node.getComponent(Customer);
+                const order = LevelOrders.getCfg(customer.OrderId);
+                if (!customerComponent || !order) throw new Error(`顾客或订单配置有误：${customer.Id} / ${customer.OrderId}`);
+                customerComponent.setOrder(order);
                 node.name = customer.Id;
                 node.setPosition(customer.X, customer.Y, 0);
                 this.customerLayer.addChild(node);
@@ -293,6 +299,28 @@ export class LevelView extends UIPanel<LevelParams> {
                 return;
             }
             this.bin?.setOpen(false);
+            if (!cancelled) {
+                const customer = this.customerLayer.getComponentsInChildren(Customer).find(candidate =>
+                    candidate.waiting && candidate.node.isValid && candidate.node.activeInHierarchy
+                    && candidate.node.getComponent(UITransform)!.getBoundingBoxToWorld().contains(point),
+                );
+                if (customer) {
+                    const container = item.getComponent(Container);
+                    if (container && customer.matches(container.ingredients)) {
+                        if (wasOnWorkbench) this.activeContainer = null;
+                        else holdingArea?.remove(item);
+                        this.draggingContainer = null;
+                        item.active = false;
+                        item.destroy();
+                        customer.leave();
+                        return;
+                    }
+                    customer.showMismatch();
+                    item.setWorldPosition(restPosition);
+                    this.draggingContainer = null;
+                    return;
+                }
+            }
             if (!cancelled && wasOnWorkbench && holdingArea?.isValid
                 && holdingArea.node.getComponent(UITransform)!.getBoundingBoxToWorld().contains(point)) {
                 const slot = holdingArea.store(item);
