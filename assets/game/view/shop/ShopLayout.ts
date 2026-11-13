@@ -1,6 +1,6 @@
 import { _decorator, Color, Component, Node, Prefab, Sprite } from 'cc';
 import type { ShopDefinition } from '../../config/Shops';
-import { BinView } from './equipment/BinView';
+// import { BinView } from './equipment/BinView';
 import { SealerView } from './equipment/SealerView';
 import { CupSupplyView } from './equipment/CupSupplyView';
 import { WorkstationView } from './equipment/WorkstationView';
