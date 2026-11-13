@@ -1,4 +1,4 @@
-import { _decorator, Color, instantiate, Label, Node, Prefab, UITransform } from 'cc';
+import { _decorator, Color, instantiate, Label, Node, Prefab, tween, Tween, UITransform, Vec3 } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
@@ -22,6 +22,7 @@ export class LevelView extends UIPanel<LevelParams> {
     static prefab = 'prefabs/view/LevelView';
 
     private loadVersion = 0;
+    private activeContainer: Node | null = null;
 
     onOpen(params: LevelParams): void {
         // 临时展示关卡 ID 和返回入口，方便验证页面切换和参数传递。
@@ -70,40 +71,63 @@ export class LevelView extends UIPanel<LevelParams> {
             if (!workbenchConfig) throw new Error(`找不到工作台配置：${config.Workbench.Id}`);
             const binConfig = Bins.getCfg(config.Bin.Id);
             if (!binConfig) throw new Error(`找不到垃圾桶配置：${config.Bin.Id}`);
-            const workbenchPrefab = app.res.load(workbenchConfig.Prefab, Prefab);
-            const binPrefab = app.res.load(binConfig.Prefab, Prefab);
-            const materialPrefabs = config.Materials.map(material => {
+            const prefabs = new Map<string, Prefab>();
+            const paths = new Set<string>();
+            paths.add(workbenchConfig.Prefab);
+            paths.add(binConfig.Prefab);
+            config.Materials.forEach(material => {
                 const materialConfig = Materials.getCfg(material.Id);
                 if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
-                return app.res.load(materialConfig.Prefab, Prefab);
+                paths.add(materialConfig.Prefab);
             });
-            const containerPrefabs = config.Containers.map(container => {
+            config.Containers.forEach(container => {
                 const containerConfig = Containers.getCfg(container.Id);
                 if (!containerConfig) throw new Error(`找不到容器配置：${container.Id}`);
-                return app.res.load(containerConfig.Prefab, Prefab);
+                paths.add(containerConfig.Prefab);
+                paths.add(containerConfig.ItemPrefab);
             });
-            const [workbench, bin, ...prefabs] = await Promise.all([workbenchPrefab, binPrefab, ...materialPrefabs, ...containerPrefabs]);
+            await Promise.all(Array.from(paths, async path => {
+                prefabs.set(path, await app.res.load(path, Prefab));
+            }));
+            const getPrefab = (path: string): Prefab => {
+                const prefab = prefabs.get(path);
+                if (!prefab) throw new Error(`找不到已加载的 Prefab：${path}`);
+                return prefab;
+            };
             if (!this.isValid || version !== this.loadVersion) return;
-            const workbenchNode = instantiate(workbench);
+            const workbenchNode = instantiate(getPrefab(workbenchConfig.Prefab));
             workbenchNode.name = config.Workbench.Id;
             workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
             this.node.addChild(workbenchNode);
             workbenchNode.setSiblingIndex(1); // 工作台位于背景之上、其他内容之下。
-            const binNode = instantiate(bin);
+            const binNode = instantiate(getPrefab(binConfig.Prefab));
             binNode.name = config.Bin.Id;
             binNode.setPosition(config.Bin.X, config.Bin.Y, 0);
             this.node.addChild(binNode);
-            config.Materials.forEach((material, index) => {
-                const node = instantiate(prefabs[index]);
+            config.Materials.forEach(material => {
+                const materialConfig = Materials.getCfg(material.Id)!;
+                const node = instantiate(getPrefab(materialConfig.Prefab));
                 node.name = material.Id;
                 node.setPosition(material.X, material.Y, 0);
                 this.node.addChild(node);
             });
-            config.Containers.forEach((container, index) => {
-                const node = instantiate(prefabs[config.Materials.length + index]);
+            config.Containers.forEach(container => {
+                const containerConfig = Containers.getCfg(container.Id)!;
+                const node = instantiate(getPrefab(containerConfig.Prefab));
                 node.name = container.Id;
                 node.setPosition(container.X, container.Y, 0);
                 this.node.addChild(node);
+                const itemPrefab = getPrefab(containerConfig.ItemPrefab);
+                node.on(Node.EventType.TOUCH_END, () => {
+                    if (this.activeContainer?.isValid) return;
+                    const item = instantiate(itemPrefab);
+                    this.activeContainer = item;
+                    this.node.addChild(item);
+                    item.setPosition(node.position);
+                    tween(item)
+                        .to(0.35, { position: new Vec3(config.Workbench.X, config.Workbench.Y, 0) }, { easing: 'quadOut' })
+                        .start();
+                });
             });
         } catch (error) {
             if (this.isValid && version === this.loadVersion) console.error(`加载关卡内容失败：${levelId}`, error);
@@ -112,5 +136,7 @@ export class LevelView extends UIPanel<LevelParams> {
 
     onClose(): void {
         this.loadVersion++;
+        if (this.activeContainer?.isValid) Tween.stopAllByTarget(this.activeContainer);
+        this.activeContainer = null;
     }
 }
