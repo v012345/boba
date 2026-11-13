@@ -1,4 +1,4 @@
-import { _decorator, Color, instantiate, Label, Node, Prefab, tween, Tween, UITransform, Vec3 } from 'cc';
+import { _decorator, Color, instantiate, Label, Node, Prefab, tween, Tween, UITransform, Vec2, Vec3 } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { RoundRect } from '../../framework/ui/RoundRect';
 import { app } from '../GameApp';
@@ -10,6 +10,7 @@ import { Bins } from '../config/Bins';
 import { HoldingAreas } from '../config/HoldingAreas';
 import { HoldingArea } from './level/holding-area/HoldingArea';
 import { Container } from './level/containers/Container';
+import { Draggable } from '../../framework/input/Draggable';
 
 const { ccclass } = _decorator;
 
@@ -27,6 +28,7 @@ export class LevelView extends UIPanel<LevelParams> {
     private loadVersion = 0;
     private activeContainer: Node | null = null;
     private flyingIngredients = new Set<Node>();
+    private draggingContainer: Node | null = null;
 
     onOpen(params: LevelParams): void {
         // 临时展示关卡 ID 和返回入口，方便验证页面切换和参数传递。
@@ -108,11 +110,13 @@ export class LevelView extends UIPanel<LevelParams> {
             workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
             this.node.addChild(workbenchNode);
             workbenchNode.setSiblingIndex(1); // 工作台位于背景之上、其他内容之下。
+            let holdingArea: HoldingArea | null = null;
             if (config.HoldingArea && holdingAreaConfig) {
                 const area = instantiate(getPrefab(holdingAreaConfig.Prefab));
                 const component = area.getComponent(HoldingArea);
                 if (!component) throw new Error('暂存区 Prefab 缺少 HoldingArea 组件');
                 component.capacity = config.HoldingArea.Capacity;
+                holdingArea = component;
                 area.name = config.HoldingArea.Id;
                 area.setPosition(config.HoldingArea.X, config.HoldingArea.Y, 0);
                 this.node.addChild(area);
@@ -147,7 +151,7 @@ export class LevelView extends UIPanel<LevelParams> {
                         .call(() => {
                             this.flyingIngredients.delete(item);
                             if (!item.isValid) return;
-                            if (!container.isValid || this.activeContainer !== container) {
+                            if (!container.isValid) {
                                 item.destroy();
                                 return;
                             }
@@ -169,6 +173,7 @@ export class LevelView extends UIPanel<LevelParams> {
                     this.activeContainer = item;
                     this.node.addChild(item);
                     item.setPosition(node.position);
+                    this.setupContainerDrag(item, workbenchNode, holdingArea);
                     tween(item)
                         .to(0.35, { position: new Vec3(config.Workbench.X, config.Workbench.Y, 0) }, { easing: 'quadOut' })
                         .start();
@@ -179,10 +184,51 @@ export class LevelView extends UIPanel<LevelParams> {
         }
     }
 
+    private setupContainerDrag(item: Node, workbench: Node, holdingArea: HoldingArea | null): void {
+        const draggable = item.getComponent(Draggable) || item.addComponent(Draggable);
+        let restPosition = new Vec3();
+        draggable.canBegin = () => !this.draggingContainer;
+        item.on(Draggable.EventType.BEGIN, () => {
+            this.draggingContainer = item;
+            Tween.stopAllByTarget(item);
+            // 工作台上的容器返回工作台中心；暂存区容器返回其原槽位。
+            restPosition = this.activeContainer === item ? workbench.worldPosition.clone() : item.worldPosition.clone();
+            item.setSiblingIndex(this.node.children.length - 1);
+        });
+        const finish = (cancelled: boolean): void => {
+            const wasOnWorkbench = this.activeContainer === item;
+            const point = new Vec2(item.worldPosition.x, item.worldPosition.y);
+            if (!cancelled && wasOnWorkbench && holdingArea?.isValid
+                && holdingArea.node.getComponent(UITransform)!.getBoundingBoxToWorld().contains(point)) {
+                const slot = holdingArea.store(item);
+                if (slot) {
+                    this.activeContainer = null;
+                    item.setWorldPosition(slot);
+                    this.draggingContainer = null;
+                    return;
+                }
+            }
+            // 工作台的可见区域在其子节点；用该区域检测容器是否放回工作台。
+            const workbenchVisual = workbench.children[0]?.getComponent(UITransform) || workbench.getComponent(UITransform)!;
+            if (!cancelled && !wasOnWorkbench && !this.activeContainer?.isValid
+                && workbenchVisual.getBoundingBoxToWorld().contains(point)) {
+                holdingArea?.remove(item);
+                this.activeContainer = item;
+                item.setWorldPosition(workbench.worldPosition);
+            } else {
+                item.setWorldPosition(restPosition);
+            }
+            this.draggingContainer = null;
+        };
+        item.on(Draggable.EventType.END, () => finish(false));
+        item.on(Draggable.EventType.CANCEL, () => finish(true));
+    }
+
     onClose(): void {
         this.loadVersion++;
         if (this.activeContainer?.isValid) Tween.stopAllByTarget(this.activeContainer);
         this.activeContainer = null;
+        this.draggingContainer = null;
         for (const item of this.flyingIngredients) {
             if (item.isValid) Tween.stopAllByTarget(item);
         }
