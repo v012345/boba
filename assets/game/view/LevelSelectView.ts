@@ -1,4 +1,4 @@
-import { _decorator, instantiate, Node, Prefab, ScrollView, Sprite, SpriteFrame, UITransform, Vec3 } from 'cc';
+import { _decorator, instantiate, Node, Prefab, ScrollView, Sprite, SpriteFrame, UITransform, Vec2, Vec3 } from 'cc';
 import { UIPanel } from '../../framework/ui/UIPanel';
 import { app } from '../GameApp';
 import { Levels } from '../config/Levels';
@@ -9,8 +9,14 @@ const { ccclass, property } = _decorator;
 const MAP_RESOURCE_DIR = 'images/level-select/maps/continuous/modular-curved';
 const MAP_FILES = ['map_01', 'map_02', 'map_03', 'map_04'];
 
+interface LevelSelectParams {
+    scrollOffset: number;
+    selectedLevelId: string;
+    completed?: boolean;
+}
+
 @ccclass('LevelSelectView')
-export class LevelSelectView extends UIPanel {
+export class LevelSelectView extends UIPanel<LevelSelectParams | void> {
     static prefab = 'prefabs/view/LevelSelectView';
 
     @property(Node)
@@ -38,8 +44,11 @@ export class LevelSelectView extends UIPanel {
     private loadVersion = 0;
     private selectedLevelId: string | null = null;
     private openingLevel = false;
+    private returnParams: LevelSelectParams | void;
 
-    onOpen(): void {
+    onOpen(params: LevelSelectParams | void): void {
+        this.returnParams = params;
+        this.selectedLevelId = params ? params.selectedLevelId : null;
         this.contentTransform = this.content.getComponent(UITransform)!;
         this.viewTransform = this.content.parent!.getComponent(UITransform)!;
         if (!this.contentTransform || !this.viewTransform || !this.levelItemPrefab.data.getComponent(LevelItem)) {
@@ -89,7 +98,20 @@ export class LevelSelectView extends UIPanel {
         content.setAnchorPoint(0, content.anchorY);
         content.setContentSize(width, content.contentSize.height);
         const scroll = this.viewTransform.node.parent?.getComponent(ScrollView);
-        scroll?.scrollToLeft(0);
+        if (scroll && this.returnParams) {
+            const levels = Levels.getCfgs();
+            const selectedLevelId = this.returnParams.selectedLevelId;
+            const index = levels.findIndex(cfg => cfg.Id === selectedLevelId);
+            const next = this.returnParams.completed && index >= 0 ? levels[index + 1] : undefined;
+            if (next) this.selectedLevelId = next.Id;
+            const offset = next
+                ? next.X + this.coordinateOffsetX - viewWidth / 2
+                : this.returnParams.scrollOffset;
+            scroll.scrollToOffset(new Vec2(Math.max(0, Math.min(offset, width - viewWidth)), 0), 0);
+        } else {
+            scroll?.scrollToLeft(0);
+        }
+        this.returnParams = undefined;
     }
 
     private refreshVisible(): void {
@@ -146,10 +168,15 @@ export class LevelSelectView extends UIPanel {
         for (const [visibleId, node] of this.visible) {
             node.getComponent(LevelItem)!.setSelected(visibleId === id);
         }
+        const scroll = this.viewTransform.node.parent?.getComponent(ScrollView);
+        // getScrollOffset 的 X 在向右滚动时为负；scrollToOffset 使用正的距离。
+        const scrollOffset = -(scroll?.getScrollOffset().x ?? 0);
         this.openingLevel = true;
         void app.ui.open(LevelView, {
             level,
-            onBack: () => { void app.ui.open<void>(LevelSelectView); },
+            onBack: (completed = false) => {
+                void app.ui.open(LevelSelectView, { scrollOffset, selectedLevelId: id, completed });
+            },
         }).then(() => { this.openingLevel = false; }, () => { this.openingLevel = false; });
     }
 

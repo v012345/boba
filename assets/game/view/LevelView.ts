@@ -7,7 +7,8 @@ const { ccclass } = _decorator;
 
 export interface LevelParams {
     level: LevelConfig;
-    onBack: () => void;
+    /** 通关后传 true；直接返回或失败时不传参数。 */
+    onBack: (completed?: boolean) => void;
 }
 
 /** 所有关卡共用的页面入口；后续可根据 level.Id 加载各关的内容配置。 */
@@ -46,6 +47,6 @@ export class LevelView extends UIPanel<LevelParams> {
         label.fontSize = 24;
         label.lineHeight = 30;
         label.string = '返回选关';
-        back.on(Node.EventType.TOUCH_END, params.onBack);
+        back.on(Node.EventType.TOUCH_END, () => params.onBack());
     }
 }
