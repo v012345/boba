@@ -7,6 +7,8 @@ import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 import { Workbenches } from '../config/Workbenches';
 import { Bins } from '../config/Bins';
+import { HoldingAreas } from '../config/HoldingAreas';
+import { HoldingArea } from './level/holding-area/HoldingArea';
 import { Container } from './level/containers/Container';
 
 const { ccclass } = _decorator;
@@ -77,6 +79,9 @@ export class LevelView extends UIPanel<LevelParams> {
             const paths = new Set<string>();
             paths.add(workbenchConfig.Prefab);
             paths.add(binConfig.Prefab);
+            const holdingAreaConfig = config.HoldingArea ? HoldingAreas.getCfg(config.HoldingArea.Id) : undefined;
+            if (config.HoldingArea && !holdingAreaConfig) throw new Error(`找不到暂存区配置：${config.HoldingArea.Id}`);
+            if (holdingAreaConfig) paths.add(holdingAreaConfig.Prefab);
             config.Materials.forEach(material => {
                 const materialConfig = Materials.getCfg(material.Id);
                 if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
@@ -103,6 +108,16 @@ export class LevelView extends UIPanel<LevelParams> {
             workbenchNode.setPosition(config.Workbench.X, config.Workbench.Y, 0);
             this.node.addChild(workbenchNode);
             workbenchNode.setSiblingIndex(1); // 工作台位于背景之上、其他内容之下。
+            if (config.HoldingArea && holdingAreaConfig) {
+                const area = instantiate(getPrefab(holdingAreaConfig.Prefab));
+                const component = area.getComponent(HoldingArea);
+                if (!component) throw new Error('暂存区 Prefab 缺少 HoldingArea 组件');
+                component.capacity = config.HoldingArea.Capacity;
+                area.name = config.HoldingArea.Id;
+                area.setPosition(config.HoldingArea.X, config.HoldingArea.Y, 0);
+                this.node.addChild(area);
+                area.setSiblingIndex(2);
+            }
             const binNode = instantiate(getPrefab(binConfig.Prefab));
             binNode.name = config.Bin.Id;
             binNode.setPosition(config.Bin.X, config.Bin.Y, 0);
