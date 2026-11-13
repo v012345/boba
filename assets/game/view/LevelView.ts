@@ -11,6 +11,8 @@ import { HoldingAreas } from '../config/HoldingAreas';
 import { HoldingArea } from './level/holding-area/HoldingArea';
 import { Container } from './level/containers/Container';
 import { Draggable } from '../../framework/input/Draggable';
+import { DropZone } from '../../framework/input/DropZone';
+import { BinView } from './level/equipment/BinView';
 
 const { ccclass } = _decorator;
 
@@ -29,6 +31,8 @@ export class LevelView extends UIPanel<LevelParams> {
     private activeContainer: Node | null = null;
     private flyingIngredients = new Set<Node>();
     private draggingContainer: Node | null = null;
+    private bin: BinView | null = null;
+    private binHovered = false;
 
     onOpen(params: LevelParams): void {
         // 临时展示关卡 ID 和返回入口，方便验证页面切换和参数传递。
@@ -126,6 +130,8 @@ export class LevelView extends UIPanel<LevelParams> {
             binNode.name = config.Bin.Id;
             binNode.setPosition(config.Bin.X, config.Bin.Y, 0);
             this.node.addChild(binNode);
+            this.bin = binNode.getComponent(BinView);
+            if (!this.bin || !this.bin.dropZone || !this.bin.skeleton) throw new Error('垃圾桶 Prefab 缺少 BinView、放置区或动画');
             config.Materials.forEach(material => {
                 const materialConfig = Materials.getCfg(material.Id)!;
                 const node = instantiate(getPrefab(materialConfig.Prefab));
@@ -184,6 +190,15 @@ export class LevelView extends UIPanel<LevelParams> {
         }
     }
 
+    update(dt: number): void {
+        if (this.bin?.isValid) this.bin.tick(dt, this.binHovered);
+    }
+
+    private isOverBin(item: Node): boolean {
+        const bin = this.bin;
+        return !!bin?.isValid && DropZone.pick([bin.dropZone], item.worldPosition.x, item.worldPosition.y) === bin.dropZone;
+    }
+
     private setupContainerDrag(item: Node, workbench: Node, holdingArea: HoldingArea | null): void {
         const draggable = item.getComponent(Draggable) || item.addComponent(Draggable);
         let restPosition = new Vec3();
@@ -194,10 +209,28 @@ export class LevelView extends UIPanel<LevelParams> {
             // 工作台上的容器返回工作台中心；暂存区容器返回其原槽位。
             restPosition = this.activeContainer === item ? workbench.worldPosition.clone() : item.worldPosition.clone();
             item.setSiblingIndex(this.node.children.length - 1);
+            this.binHovered = this.isOverBin(item);
+            this.bin?.setOpen(this.binHovered);
+        });
+        item.on(Draggable.EventType.MOVE, () => {
+            this.binHovered = this.isOverBin(item);
+            this.bin?.setOpen(this.binHovered);
         });
         const finish = (cancelled: boolean): void => {
             const wasOnWorkbench = this.activeContainer === item;
             const point = new Vec2(item.worldPosition.x, item.worldPosition.y);
+            const discard = !cancelled && this.isOverBin(item);
+            this.binHovered = false;
+            if (discard) {
+                if (wasOnWorkbench) this.activeContainer = null;
+                else holdingArea?.remove(item);
+                this.draggingContainer = null;
+                item.active = false;
+                item.destroy();
+                this.bin?.swallow();
+                return;
+            }
+            this.bin?.setOpen(false);
             if (!cancelled && wasOnWorkbench && holdingArea?.isValid
                 && holdingArea.node.getComponent(UITransform)!.getBoundingBoxToWorld().contains(point)) {
                 const slot = holdingArea.store(item);
@@ -229,6 +262,8 @@ export class LevelView extends UIPanel<LevelParams> {
         if (this.activeContainer?.isValid) Tween.stopAllByTarget(this.activeContainer);
         this.activeContainer = null;
         this.draggingContainer = null;
+        this.binHovered = false;
+        this.bin = null;
         for (const item of this.flyingIngredients) {
             if (item.isValid) Tween.stopAllByTarget(item);
         }
