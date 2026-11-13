@@ -58,10 +58,10 @@ const config: Readonly<Record<string, readonly [
     holdingArea?: readonly [HoldingAreaId, number, number, number],
 ]>> = {
     level_001: [[
-        ['tea', -240, 0],
-        ['milk', 0, 0],
-        ['pearl', 240, 0],
-    ], [['bowlStack', -450, -200],['cupStack', 450, -200]], ['workbench', 0, -200], ['bin', 550, -200], 'underworldStall', ['holdingArea', 0, 150, 2]],
+        ['tea', -490, -10],
+        ['milk', -340, -10],
+        ['pearl', -190, -10],
+    ], [['bowlStack', -450, -220], ['cupStack', -160, -220]], ['workbench', 75, -20], ['bin', 520, -220], 'underworldStall', ['holdingArea', 430, -20, 2]],
     level_002: [[
         ['bone', -240, 0],
         ['organs', 0, 0],
