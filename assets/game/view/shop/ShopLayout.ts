@@ -1,12 +1,12 @@
 import { _decorator, Color, Component, Node, Prefab, Sprite } from 'cc';
 import type { ShopDefinition } from '../../config/Shops';
-// import { BinView } from './equipment/BinView';
+import { BinView } from '../level/equipment/BinView';
 import { SealerView } from './equipment/SealerView';
 import { CupSupplyView } from './equipment/CupSupplyView';
 import { WorkstationView } from './equipment/WorkstationView';
 import { CupView } from './drinks/CupView';
 import { CustomerView } from './customers/CustomerView';
-import { IngredientTray } from '../IngredientTray';
+import { IngredientTray } from '../level/materials/IngredientTray';
 
 
 const { ccclass, property } = _decorator;

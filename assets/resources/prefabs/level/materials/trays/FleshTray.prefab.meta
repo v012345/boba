@@ -2,12 +2,12 @@
   "ver": "1.1.50",
   "importer": "prefab",
   "imported": true,
-  "uuid": "ce71296b-50ff-4d70-9479-f6979fcf3324",
+  "uuid": "a337a7c6-54df-4b03-acb8-8187075ec91c",
   "files": [
     ".json"
   ],
   "subMetas": {},
   "userData": {
-    "syncNodeName": "Poop"
+    "syncNodeName": "FleshTray"
   }
 }

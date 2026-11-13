@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, sp } from 'cc';
-import { DropZone } from '../../framework/input/DropZone';
+import { DropZone } from '../../../../framework/input/DropZone';
 
 
 const { ccclass, property } = _decorator;

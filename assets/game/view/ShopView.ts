@@ -8,14 +8,14 @@ import { app } from '../GameApp';
 import { Ingredient, TeaGame } from '../logic/TeaGame';
 import type { ShopDefinition } from '../config/Shops';
 import { ShopLayout } from './shop/ShopLayout';
-import { BinView } from './shop/equipment/BinView';
+import { BinView } from './level/equipment/BinView';
 import { SealerView } from './shop/equipment/SealerView';
 import { CupSupplyView } from './shop/equipment/CupSupplyView';
 import { WorkstationView } from './shop/equipment/WorkstationView';
 import { CupView } from './shop/drinks/CupView';
 import { CustomerView } from './shop/customers/CustomerView';
 import { DrinkView } from './shop/drinks/DrinkView';
-import { IngredientTray } from './IngredientTray';
+import { IngredientTray } from './level/materials/IngredientTray';
 
 
 const { ccclass } = _decorator;

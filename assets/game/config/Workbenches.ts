@@ -1,6 +1,6 @@
 /** 工作台 ID 对应的 Prefab 路径，路径相对 assets/resources。 */
 const config = {
-    workbench: 'prefabs/level/Workbench',
+    workbench: 'prefabs/level/workbench/Workbench',
 } as const;
 
 export type WorkbenchId = keyof typeof config;
