@@ -7,6 +7,7 @@ import { Containers } from '../config/Containers';
 import { Materials } from '../config/Materials';
 import { Workbenches } from '../config/Workbenches';
 import { Bins } from '../config/Bins';
+import { Container } from './level/containers/Container';
 
 const { ccclass } = _decorator;
 
@@ -23,6 +24,7 @@ export class LevelView extends UIPanel<LevelParams> {
 
     private loadVersion = 0;
     private activeContainer: Node | null = null;
+    private flyingIngredients = new Set<Node>();
 
     onOpen(params: LevelParams): void {
         // 临时展示关卡 ID 和返回入口，方便验证页面切换和参数传递。
@@ -79,6 +81,7 @@ export class LevelView extends UIPanel<LevelParams> {
                 const materialConfig = Materials.getCfg(material.Id);
                 if (!materialConfig) throw new Error(`找不到材料配置：${material.Id}`);
                 paths.add(materialConfig.Prefab);
+                paths.add(materialConfig.ItemPrefab);
             });
             config.Containers.forEach(container => {
                 const containerConfig = Containers.getCfg(container.Id);
@@ -110,6 +113,33 @@ export class LevelView extends UIPanel<LevelParams> {
                 node.name = material.Id;
                 node.setPosition(material.X, material.Y, 0);
                 this.node.addChild(node);
+                const itemPrefab = getPrefab(materialConfig.ItemPrefab);
+                node.on(Node.EventType.TOUCH_END, () => {
+                    const container = this.activeContainer;
+                    if (!container?.isValid) return;
+                    const containerComponent = container.getComponent(Container);
+                    if (!containerComponent) {
+                        console.error('容器 Prefab 缺少 Container 组件');
+                        return;
+                    }
+                    const ingredientIndex = containerComponent.addIngredient(material.Id);
+                    const item = instantiate(itemPrefab);
+                    this.node.addChild(item);
+                    item.setPosition(node.position);
+                    this.flyingIngredients.add(item);
+                    tween(item)
+                        .to(0.35, { position: new Vec3(config.Workbench.X, config.Workbench.Y, 0) }, { easing: 'quadIn' })
+                        .call(() => {
+                            this.flyingIngredients.delete(item);
+                            if (!item.isValid) return;
+                            if (!container.isValid || this.activeContainer !== container) {
+                                item.destroy();
+                                return;
+                            }
+                            containerComponent.showIngredient(item, ingredientIndex);
+                        })
+                        .start();
+                });
             });
             config.Containers.forEach(container => {
                 const containerConfig = Containers.getCfg(container.Id)!;
@@ -138,5 +168,9 @@ export class LevelView extends UIPanel<LevelParams> {
         this.loadVersion++;
         if (this.activeContainer?.isValid) Tween.stopAllByTarget(this.activeContainer);
         this.activeContainer = null;
+        for (const item of this.flyingIngredients) {
+            if (item.isValid) Tween.stopAllByTarget(item);
+        }
+        this.flyingIngredients.clear();
     }
 }
