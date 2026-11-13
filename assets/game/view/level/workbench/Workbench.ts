@@ -1,14 +1,7 @@
-import { _decorator, Component, Node } from 'cc';
-const { ccclass, property } = _decorator;
+import { _decorator, Component } from 'cc';
 
+const { ccclass } = _decorator;
+
+/** 工作台的预留组件。 */
 @ccclass('Workbench')
-export class Workbench extends Component {
-    start() {
-
-    }
-
-    update(deltaTime: number) {
-        
-    }
-}
-
+export class Workbench extends Component {}

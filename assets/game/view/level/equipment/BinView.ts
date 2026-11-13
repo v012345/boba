@@ -1,13 +1,12 @@
 import { _decorator, Component, Node, sp } from 'cc';
 import { DropZone } from '../../../../framework/input/DropZone';
 
-
 const { ccclass, property } = _decorator;
 
 /**
  * 垃圾桶：杯子拖到上方时开盖，丢进去后弹一下再合上。
  * 用 Spine 动画，需要有 open、close、bounce 三个动作。
- * 不自己跑 update，由 ShopView 调用 tick，这样暂停时会一起冻结。
+ * 不自己跑 update，由使用它的页面调用 tick，这样暂停时会一起冻结。
  */
 @ccclass('BinView')
 export class BinView extends Component {

@@ -1,9 +1,0 @@
-{
-  "class": "export-json",
-  "extension": ".json",
-  "prettyPrint": true,
-  "nonessential": false,
-  "cleanUp": false,
-  "warnings": true,
-  "packAtlas": null
-}
